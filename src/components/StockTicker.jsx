@@ -1,104 +1,119 @@
-import React, { useEffect, useState } from "react";
+// src/components/StockTicker.jsx
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 
 export default function StockTicker() {
-  const [marketData, setMarketData] = useState([]);
+  const [crypto, setCrypto] = useState(null);
+  const [error, setError] = useState("");
+
+  const items = useMemo(() => {
+    if (!crypto) return [];
+    return [
+      { label: "BTC/USD", value: crypto?.bitcoin?.usd },
+      { label: "ETH/USD", value: crypto?.ethereum?.usd },
+      { label: "SOL/USD", value: crypto?.solana?.usd },
+      { label: "DOGE/USD", value: crypto?.dogecoin?.usd },
+    ].filter((i) => typeof i.value === "number");
+  }, [crypto]);
 
   useEffect(() => {
-    const fetchMarketData = async () => {
+    let mounted = true;
+
+    const fetchCrypto = async () => {
       try {
-        // 📈 Fetch crypto prices
-        const cryptoRes = await axios.get(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,dogecoin&vs_currencies=usd"
+        setError("");
+        const res = await axios.get(
+          "https://api.coingecko.com/api/v3/simple/price",
+          {
+            params: {
+              ids: "bitcoin,ethereum,solana,dogecoin",
+              vs_currencies: "usd",
+            },
+          }
         );
-        const crypto = cryptoRes.data;
-
-        // 💱 Fetch forex data
-        const forexPairs = [
-          { from: "USD", to: "TZS" },
-          { from: "EUR", to: "USD" },
-          { from: "GBP", to: "USD" },
-          { from: "JPY", to: "USD" },
-        ];
-
-        const forexData = await Promise.all(
-          forexPairs.map(async (pair) => {
-            const res = await axios.get(
-              `https://api.exchangerate.host/convert?from=${pair.from}&to=${pair.to}`
-            );
-            const rate = res.data?.result;
-            return {
-              label: `${pair.from}/${pair.to}`,
-              price: typeof rate === "number" ? rate : null,
-            };
-          })
-        );
-
-        // 📊 Fetch stock data from Twelve Data
-        const symbols = ["AAPL", "MSFT", "GOOGL", "TSLA", "AMZN"];
-        const apiKey = "bce6a0d57c5a4ae5ac9ed60f5cb31e02";
-
-        // TwelveData allows one symbol per request on free plan
-        const stockData = await Promise.all(
-          symbols.map(async (symbol) => {
-            const res = await axios.get(
-              `https://api.twelvedata.com/quote?symbol=${symbol}&apikey=${apiKey}`
-            );
-            return {
-              label: symbol,
-              price: parseFloat(res.data.price),
-            };
-          })
-        );
-
-        // ✅ Combine all data
-        const combined = [
-          { label: "BTC/USD", price: crypto?.bitcoin?.usd },
-          { label: "ETH/USD", price: crypto?.ethereum?.usd },
-          { label: "SOL/USD", price: crypto?.solana?.usd },
-          { label: "DOGE/USD", price: crypto?.dogecoin?.usd },
-          ...forexData,
-          ...stockData,
-        ];
-
-        setMarketData(combined);
-      } catch (err) {
-        console.error("Market data fetch failed:", err);
+        if (mounted) setCrypto(res.data);
+      } catch (e) {
+        if (mounted) setError("live prices unavailable");
+        console.error("Crypto fetch failed:", e?.message || e);
       }
     };
 
-    fetchMarketData();
-    const interval = setInterval(fetchMarketData, 60 * 1000); // refresh every 1 minute
-    return () => clearInterval(interval);
+    fetchCrypto();
+    const id = setInterval(fetchCrypto, 60_000); // refresh every 60s
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, []);
 
+  // fallback announcements if API is down or blocked/rate-limited
+  const fallbacks = [
+    { label: "BlsunTech", value: "Design • Build • Scale" },
+    { label: "Status", value: "All systems nominal" },
+    { label: "Security", value: "Zero-trust by default" },
+  ];
+
+  const feed = items.length ? items : fallbacks;
+
   return (
-    <div className="w-full bg-black text-white overflow-hidden border-b border-white/10">
-      <div className="animate-marquee whitespace-nowrap py-1 px-4 text-sm">
-        {marketData.length > 0 ? (
-          marketData.map((item) => (
-            <span key={item.label} className="inline-block mr-8">
-              <span className="font-semibold">{item.label}</span>:{" "}
-              {typeof item.price === "number" ? (
-                <span className="text-emerald-400">${item.price.toFixed(2)}</span>
-              ) : (
-                <span className="text-gray-400">N/A</span>
-              )}
+    <div className="w-full overflow-hidden border-b border-amber-300/10 bg-black/20 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+      {/* subtle golden glow */}
+      <div className="pointer-events-none absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-amber-300/30 to-transparent" />
+
+      <div
+        className="relative group py-1.5"
+        aria-live="polite"
+        aria-busy={!items.length && !error ? "true" : "false"}
+      >
+        {/* gradient edge masks for nicer fade at edges */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-12 bg-gradient-to-r from-[#0a0a0b] to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[#0a0a0b] to-transparent" />
+
+        {/* marquee track (duplicated for seamless loop) */}
+        <div className="marquee inline-flex whitespace-nowrap will-change-transform group-hover:[animation-play-state:paused]">
+          {[0, 1].map((dup) => (
+            <span key={dup} className="inline-flex items-center">
+              {feed.map((it) => (
+                <span key={`${dup}-${it.label}`} className="inline-flex items-center gap-2 pr-10">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-300/80 shadow-[0_0_12px_rgba(251,191,36,0.7)]" />
+                    <span className="text-amber-100/90 font-medium">{it.label}</span>
+                  </span>
+                  <span className="text-white/85">
+                    {typeof it.value === "number"
+                      ? `$${it.value.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}`
+                      : <span className="text-white/60">{it.value}</span>}
+                  </span>
+                </span>
+              ))}
+              {/* spacer between loops */}
+              <span className="pr-10" />
             </span>
-          ))
-        ) : (
-          <span>Loading market data...</span>
+          ))}
+        </div>
+
+        {/* tiny status note if failing */}
+        {error && (
+          <span className="sr-only">
+            {error}. Showing site announcements instead.
+          </span>
         )}
       </div>
 
+      {/* local styles for marquee + reduced motion */}
       <style>{`
-        .animate-marquee {
-          display: inline-block;
-          animation: marquee 30s linear infinite;
+        .marquee {
+          animation: blsun-marquee 28s linear infinite;
         }
-        @keyframes marquee {
-          0% { transform: translateX(100%) }
-          100% { transform: translateX(-100%) }
+        @keyframes blsun-marquee {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .marquee { animation: none; }
         }
       `}</style>
     </div>

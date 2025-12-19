@@ -1,8 +1,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 
-// Env-based API config (Vite or CRA)
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5050";
-const ADMIN_TOKEN = process.env.REACT_APP_INTAKE_ADMIN_TOKEN || "";
+// Use same-origin in prod, localhost in dev
+const API_BASE =
+  process.env.NODE_ENV === "production"
+    ? ""                          // => fetch("/api/...") on Vercel
+    : (process.env.REACT_APP_API_BASE || "http://localhost:5050");
+
+// Pull the admin token from env (Vite or CRA)
+const ADMIN_TOKEN =
+  (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_INTAKE_ADMIN_TOKEN) ||
+  process.env.REACT_APP_INTAKE_ADMIN_TOKEN ||
+  "";
 
 // Optional: keep in sync with your services list
 const SERVICE_OPTIONS = [

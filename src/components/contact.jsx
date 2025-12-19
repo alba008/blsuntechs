@@ -1,139 +1,169 @@
 // src/components/Contact.jsx
 import React from "react";
+import {
+  Home,
+  PanelsTopLeft,
+  FolderGit2,
+  Mail,
+  Sparkles,
+  Linkedin,
+  Github,
+  Twitter,
+  ArrowRight,
+  Mail as MailIcon,
+  Phone,
+  MapPin,
+} from "lucide-react";
 
 export default function Contact({ onOpenStartProject }) {
+  // Unified opener: use prop if available, otherwise broadcast a global event
+  const handleStart = (label = "Contact") => {
+    if (typeof onOpenStartProject === "function") {
+      onOpenStartProject(label);
+      return;
+    }
+    window.dispatchEvent(
+      new CustomEvent("open-start-project", {
+        detail: { presetService: label },
+      })
+    );
+  };
+
   return (
-    <footer id="contact" className="relative overflow-hidden bg-black">
-      {/* background layers */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-black to-indigo-950" />
-        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl bg-emerald-500/20" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-cyan-500/20" />
+    <footer id="contact" className="relative overflow-hidden bg-[#0a0a0b] text-white">
+      {/* BACKGROUND */}
+      <div className="absolute inset-0 -z-20">
+        <div className="absolute inset-0 bg-[radial-gradient(1100px_420px_at_50%_-150px,rgba(245,222,179,0.12),transparent_55%)]" />
+        <div className="absolute inset-0 bg-[conic-gradient(from_210deg_at_20%_30%,rgba(245,158,11,0.08),rgba(34,197,94,0.08),rgba(99,102,241,0.08),transparent_70%)]" />
+        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl bg-amber-400/20" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-emerald-500/16" />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: "radial-gradient(#fff 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
+          style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }}
         />
       </div>
 
-      {/* top CTA bar */}
-      <section className="container-safe py-14">
-        <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-extrabold">
-              <span className="bg-gradient-to-r from-emerald-300 via-cyan-300 to-indigo-300 bg-clip-text text-transparent">
-                Let’s build something great.
-              </span>
-            </h2>
-            <p className="text-white/70 mt-2">
-              Web & apps, AI features, cloud, security, and automation—delivered fast and safely.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={
-                onOpenStartProject ??
-                (() => document.querySelector("#contact-details")?.scrollIntoView({ behavior: "smooth" }))
-              }
-              className="rounded-full bg-white text-black px-5 py-2.5 font-medium hover:bg-slate-100"
+      {/* TOP CTA (hidden on mobile to save space for bottom bar) */}
+      <section className="container-safe py-6 sm:py-10 hidden md:block">
+        <div className="group relative rounded-2xl p-[1px] bg-gradient-to-br from-[#f5deb3]/60 via-[#caa46c]/28 to-[#f5deb3]/60 shadow-[0_22px_80px_-28px_rgba(255,215,150,.35)]">
+          <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-7 lg:p-8">
+            <span
+              className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition duration-500"
+              style={{
+                background:
+                  "radial-gradient(520px 200px at var(--mx,50%) var(--my,50%), rgba(255,215,150,0.10), transparent 55%)",
+              }}
+              aria-hidden
+            />
+            <div
+              className="flex items-center justify-between gap-5"
+              onMouseMove={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                e.currentTarget.parentElement?.style.setProperty("--mx", `${e.clientX - r.left}px`);
+                e.currentTarget.parentElement?.style.setProperty("--my", `${e.clientY - r.top}px`);
+              }}
             >
-              Start a project
-            </button>
-            <a
-              href="mailto:info@blsuntech.com?subject=Project%20Enquiry"
-              className="rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-white hover:bg-white/10"
-            >
-              Email us
-            </a>
+              <div className="space-y-2">
+                <h2 className="text-3xl font-extrabold leading-tight">
+                  <span className="bg-gradient-to-r from-amber-200 via-amber-100 to-white bg-clip-text text-transparent">
+                    Let’s build something great.
+                  </span>
+                </h2>
+                <p className="text-white/75">
+                  Web & apps, AI features, cloud, security, and automation—delivered fast and safely.
+                </p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleStart("Contact (desktop)")}
+                  className="relative group inline-flex items-center justify-center rounded-full px-5 py-2.5 font-semibold text-black
+                             bg-gradient-to-b from-amber-300 via-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300
+                             shadow-[0_12px_28px_-12px_rgba(251,191,36,0.65)]
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                >
+                  <span className="relative z-10">Start a project</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <span className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
+                    <span className="absolute -inset-y-6 -left-10 w-16 rotate-12 bg-white/55 blur-md opacity-0 group-hover:opacity-100 transition" />
+                  </span>
+                </button>
+                <a
+                  href="mailto:info@blsuntech.com?subject=Project%20Enquiry"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5
+                             px-5 py-2.5 text-white hover:bg-white/10 backdrop-blur-md
+                             shadow-[0_12px_28px_-16px_rgba(0,0,0,0.6)]"
+                >
+                  <MailIcon className="h-4 w-4" />
+                  Email us
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* footer grid */}
-      <section id="contact-details" className="container-safe pb-10">
+      {/* FOOTER GRID (hidden on very small screens to keep it clean) */}
+      <section id="contact-details" className="container-safe pb-24 md:pb-10 hidden sm:block">
         <div className="grid gap-10 md:grid-cols-4">
-          {/* brand / blurb */}
+          {/* Brand */}
           <div className="md:col-span-2">
             <div className="text-xl font-bold">BlsunTech</div>
             <p className="text-white/70 mt-3 max-w-prose">
-              Results-driven engineering for modern companies. We ship secure, scalable products—
-              from MVP to production—across the US & Africa.
+              Results-driven engineering for modern companies. We ship secure, scalable products—from MVP to production—across the US &amp; Africa.
             </p>
 
-            {/* social */}
+            {/* Social */}
             <div className="mt-5 flex items-center gap-3">
-              <a
-                href="https://www.linkedin.com"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
-                aria-label="LinkedIn"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-white/80">
-                  <path d="M4.98 3.5C4.98 4.88 3.86 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1s2.48 1.12 2.48 2.5zM0 8h5v15H0V8zm7.5 0h4.8v2.1h.07c.67-1.2 2.3-2.46 4.73-2.46 5.06 0 6 3.33 6 7.66V23H18V16.1c0-1.65-.03-3.77-2.3-3.77-2.3 0-2.65 1.8-2.65 3.65V23H7.5V8z" />
-                </svg>
-              </a>
-              <a
-                href="https://github.com"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
-                aria-label="GitHub"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-white/80">
-                  <path d="M12 .5a12 12 0 0 0-3.79 23.4c.6.11.82-.26.82-.58 0-.29-.01-1.04-.02-2.05-3.34.73-4.04-1.61-4.04-1.61-.55-1.4-1.34-1.77-1.34-1.77-1.09-.74.08-.73.08-.73 1.2.08 1.83 1.23 1.83 1.23 1.07 1.83 2.82 1.3 3.51.99.11-.78.42-1.3.76-1.6-2.67-.3-5.48-1.34-5.48-5.96 0-1.32.47-2.4 1.24-3.25-.12-.3-.54-1.52.12-3.17 0 0 1.01-.32 3.3 1.23a11.48 11.48 0 0 1 6 0c2.3-1.55 3.31-1.23 3.31-1.23.66 1.65.24 2.87.12 3.17.77.85 1.23 1.93 1.23 3.25 0 4.63-2.82 5.65-5.5 5.95.43.37.81 1.1.81 2.22 0 1.6-.02 2.88-.02 3.28 0 .32.21.69.83.57A12 12 0 0 0 12 .5Z" />
-                </svg>
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10"
-                aria-label="Twitter"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" className="text-white/80">
-                  <path d="M22.46 6c-.77.35-1.6.58-2.46.69a4.27 4.27 0 0 0 1.88-2.36 8.54 8.54 0 0 1-2.71 1.03 4.25 4.25 0 0 0-7.23 3.88 12.07 12.07 0 0 1-8.76-4.44 4.25 4.25 0 0 0 1.32 5.67 4.2 4.2 0 0 1-1.92-.53v.06a4.25 4.25 0 0 0 3.41 4.17 4.3 4.3 0 0 1-1.91.07 4.25 4.25 0 0 0 3.96 2.95A8.53 8.53 0 0 1 2 19.54 12.04 12.04 0 0 0 8.29 21.5c7.55 0 11.68-6.26 11.68-11.68 0-.18-.01-.36-.02-.55A8.35 8.35 0 0 0 22.46 6Z" />
-                </svg>
-              </a>
+              <IconButton href="https://www.linkedin.com" label="LinkedIn"><Linkedin className="h-4 w-4" /></IconButton>
+              <IconButton href="https://github.com" label="GitHub"><Github className="h-4 w-4" /></IconButton>
+              <IconButton href="https://twitter.com" label="Twitter / X"><Twitter className="h-4 w-4" /></IconButton>
             </div>
           </div>
 
-          {/* contact */}
+          {/* Contact */}
           <div>
             <h3 className="text-white/90 font-semibold">Contact</h3>
-            <ul className="mt-3 space-y-2 text-white/75">
-              <li className="flex gap-2">
-                <span className="text-white/50">Email:</span>
-                <a className="hover:underline" href="mailto:info@blsuntech.com">info@blsuntech.com</a>
+            <ul className="mt-3 space-y-2 text-white/80">
+              <li className="flex items-start gap-2.5">
+                <MailIcon className="mt-0.5 h-4 w-4 text-amber-300/90" />
+                <div className="flex gap-1 flex-wrap">
+                  <span className="text-white/55">Email:</span>
+                  <a className="hover:underline" href="mailto:info@blsuntech.com">lilian@blsuntechdynamics.com</a>
+                </div>
               </li>
-              <li className="flex gap-2">
-                <span className="text-white/50">Phone:</span>
-                <a className="hover:underline" href="tel:+13153516254">+1 315 351-6254</a>
+              <li className="flex items-start gap-2.5">
+                <Phone className="mt-0.5 h-4 w-4 text-amber-300/90" />
+                <div className="flex gap-1 flex-wrap">
+                  <span className="text-white/55">Phone:</span>
+                  <a className="hover:underline" href="tel:+13153516254">+1 720-281-0748</a>
+                </div>
               </li>
-              <li className="flex gap-2">
-                <span className="text-white/50">Location:</span>
-                <span>New Jersey, USA</span>
+              <li className="flex items-start gap-2.5">
+                <MapPin className="mt-0.5 h-4 w-4 text-amber-300/90" />
+                <div className="flex gap-1 flex-wrap">
+                  <span className="text-white/55">Location:</span>
+                  <span>New Jersey, USA</span>
+                </div>
               </li>
               <li className="pt-2">
                 <a
                   href="#services"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-sm hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/6 px-3 py-1.5 text-sm
+                             hover:bg-white/12 backdrop-blur-md
+                             shadow-[0_12px_28px_-16px_rgba(0,0,0,0.6)]"
                 >
                   Our services
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <ArrowRight className="h-4 w-4" />
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* quick links / newsletter */}
+          {/* Quick links + estimate */}
           <div>
             <h3 className="text-white/90 font-semibold">Quick Links</h3>
-            <ul className="mt-3 space-y-2 text-white/75">
+            <ul className="mt-3 space-y-2 text-white/80">
               <li><a className="hover:underline" href="#projects">Projects</a></li>
               <li><a className="hover:underline" href="#services">Services</a></li>
               <li><a className="hover:underline" href="/admin/enquiries">Admin</a></li>
@@ -149,15 +179,20 @@ export default function Contact({ onOpenStartProject }) {
                 }}
                 className="flex gap-2"
               >
-                <input
-                  name="email"
-                  type="email"
-                  required
-                  placeholder="you@company.com"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-emerald-400/30"
-                />
-                <button className="shrink-0 rounded-lg bg-white text-black px-3 py-2 hover:bg-slate-100">
-                  Send
+                <div className="rounded-lg p-[1px] bg-gradient-to-br from-[#f5deb3]/60 via-[#caa46c]/28 to-[#f5deb3]/60 shadow-[0_12px_28px_-16px_rgba(255,215,150,.35)] w-full">
+                  <input
+                    name="email"
+                    type="email"
+                    required
+                    placeholder="you@company.com"
+                    className="w-full rounded-[10px] border border-white/10 bg-white/5 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-amber-300/30 placeholder:text-white/50"
+                  />
+                </div>
+                <button className="relative group shrink-0 rounded-lg bg-white text-black px-4 py-2 font-semibold hover:bg-slate-100 transition shadow-[0_12px_28px_-12px_rgba(255,255,255,.15)]">
+                  <span className="relative z-10">Send</span>
+                  <span className="pointer-events-none absolute inset-0 rounded-lg overflow-hidden">
+                    <span className="absolute -inset-y-6 -left-10 w-12 rotate-12 bg-white/60 blur-md opacity-0 group-hover:opacity-100 transition" />
+                  </span>
                 </button>
               </form>
             </div>
@@ -165,17 +200,100 @@ export default function Contact({ onOpenStartProject }) {
         </div>
       </section>
 
-      {/* legal bar */}
+      {/* LEGAL BAR (visible everywhere) */}
       <div className="border-t border-white/10">
-        <div className="container-safe py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-white/60">
+        <div className="container-safe py-5 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-white/65">
           <div>© {new Date().getFullYear()} BlsunTech. All rights reserved.</div>
-          <div className="flex items-center gap-4"><a href="/privacy" className="hover:text-white">Privacy</a>
-<a href="/terms" className="hover:text-white">Terms</a>
+          <div className="hidden sm:flex items-center gap-4">
+            <a href="/privacy" className="hover:text-white">Privacy</a>
+            <a href="/terms" className="hover:text-white">Terms</a>
             <a href="mailto:info@blsuntech.com" className="hover:text-white">Support</a>
           </div>
         </div>
       </div>
+
+      {/* --- MOBILE APP-STYLE BOTTOM BAR (ICONS ONLY) --- */}
+      <MobileBottomBar onOpenStartProject={() => handleStart("Contact (mobile)")} />
     </footer>
+  );
+}
+
+/* ---------- Small atoms ---------- */
+function IconButton({ href, label, children }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 ring-1 ring-transparent hover:ring-amber-300/20 transition shadow-[0_10px_24px_-14px_rgba(0,0,0,0.55)]"
+    >
+      <span className="text-white/85">{children}</span>
+    </a>
+  );
+}
+
+/* ---------- Mobile bottom nav ---------- */
+function MobileBottomBar({ onOpenStartProject }) {
+  return (
+    <nav
+      className="
+        sm:hidden fixed bottom-0 inset-x-0 z-50
+        p-2 pb-[calc(env(safe-area-inset-bottom)+0px)]
+      "
+      aria-label="Primary"
+    >
+      {/* Gradient frame */}
+      <div className="rounded-2xl p-[1px] bg-gradient-to-br from-[#f5deb3]/06 via-[#caa46c]/28 to-[#f5deb3]/60 shadow-[0_-10px_40px_-16px_rgba(255,215,150,.35)]">
+        {/* Glass bar */}
+        <div
+          className="
+            grid grid-cols-5 gap-1 rounded-2xl
+            border border-white/10 bg-white/5 backdrop-blur-xl
+            px-2 py-2
+          "
+        >
+          <IconOnly href="#home" label="Home"><Home className="h-5 w-5" /></IconOnly>
+          <IconOnly href="#services" label="Services"><PanelsTopLeft className="h-5 w-5" /></IconOnly>
+
+          {/* center action */}
+          <button
+            onClick={onOpenStartProject}
+            aria-label="Start a project"
+            className="
+              -mt-6 mx-auto inline-flex items-center justify-center h-12 w-12 rounded-full
+              text-black
+              bg-gradient-to-b from-amber-300 via-amber-300 to-amber-400
+              shadow-[0_12px_28px_-12px_rgba(251,191,36,0.65)]
+              ring-2 ring-[#f5deb3]/60
+              active:scale-95 transition
+            "
+          >
+            <Sparkles className="h-5 w-5" />
+          </button>
+
+          <IconOnly href="#projects" label="Projects"><FolderGit2 className="h-5 w-5" /></IconOnly>
+          <IconOnly href="#contact-details" label="Contact"><Mail className="h-5 w-5" /></IconOnly>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+function IconOnly({ href, label, children }) {
+  return (
+    <a
+      href={href}
+      aria-label={label}
+      className="
+        mx-auto inline-flex h-10 w-10 items-center justify-center rounded-xl
+        text-white/85 hover:text-white
+        active:scale-95 transition
+      "
+    >
+      {children}
+      <span className="sr-only">{label}</span>
+    </a>
   );
 }
 

@@ -33,30 +33,31 @@ const projects = [
   },
 ];
 
-// --- small helpers ---
+// --- motion helpers (unchanged) ---
 const container = {
   hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.07, delayChildren: 0.08 },
-  },
+  show: { opacity: 1, transition: { staggerChildren: 0.07, delayChildren: 0.08 } },
 };
-
 const item = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: "easeOut" } },
 };
 
+// --- UI atoms ---
 function TechBadge({ label }) {
   return (
-    <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/80 backdrop-blur">
+    <span
+      className="inline-flex items-center rounded-full px-3 py-1 text-xs
+                 text-[#f5deb3] bg-white/5 backdrop-blur
+                 ring-1 ring-[#f5deb3]/25 shadow-[0_8px_20px_-12px_rgba(255,215,150,0.45)]"
+    >
       {label}
     </span>
   );
 }
 
 function ProjectCard({ project }) {
-  // 3D tilt + cursor glow using CSS vars
+  // 3D tilt + cursor glow (unchanged)
   const onMove = (e) => {
     const el = e.currentTarget;
     const r = el.getBoundingClientRect();
@@ -64,14 +65,13 @@ function ProjectCard({ project }) {
     const y = e.clientY - r.top;
     const midX = r.width / 2;
     const midY = r.height / 2;
-    const rotX = ((y - midY) / midY) * -6; // tilt up/down
-    const rotY = ((x - midX) / midX) * 6; // tilt left/right
+    const rotX = ((y - midY) / midY) * -6;
+    const rotY = ((x - midX) / midX) * 6;
     el.style.setProperty("--rx", `${rotX}deg`);
     el.style.setProperty("--ry", `${rotY}deg`);
     el.style.setProperty("--mx", `${x}px`);
     el.style.setProperty("--my", `${y}px`);
   };
-
   const onLeave = (e) => {
     const el = e.currentTarget;
     el.style.setProperty("--rx", `0deg`);
@@ -80,34 +80,43 @@ function ProjectCard({ project }) {
 
   return (
     <motion.div variants={item}>
-      <div
-        onMouseMove={onMove}
-        onMouseLeave={onLeave}
-        className="group relative [perspective:1000px]"
-      >
-        {/* gradient border wrapper */}
-        <div className="relative rounded-2xl p-[1px] bg-gradient-to-br from-emerald-400/40 via-cyan-400/40 to-indigo-400/40">
-          {/* card */}
+      <div onMouseMove={onMove} onMouseLeave={onLeave} className="group relative [perspective:1000px]">
+        {/* warm golden gradient border (matches Login card ring/glow) */}
+        <div
+          className="relative rounded-2xl p-[1px]
+                     bg-gradient-to-br from-[#f5deb3]/60 via-[#caa46c]/25 to-[#f5deb3]/60
+                     shadow-[0_12px_44px_-16px_rgba(255,215,150,0.35)]"
+        >
+          {/* glass card */}
           <div
-            className="rounded-2xl bg-slate-900/70 backdrop-blur-xl border border-white/10 p-6 transition-transform duration-300 will-change-transform"
+            className="relative rounded-2xl p-6 backdrop-blur-xl
+                       ring-1 ring-[#f5deb3]/20
+                       transition-transform duration-300 will-change-transform"
             style={{
               transform: "rotateX(var(--rx,0)) rotateY(var(--ry,0))",
+              background: "rgba(20,20,25,0.85)", // mirrors Login card bg
+              boxShadow: "0 0 25px rgba(255, 215, 150, 0.08)",
             }}
           >
-            {/* subtle moving glow */}
+            {/* hover glow follows cursor */}
             <div
               className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition duration-500"
               style={{
                 background:
-                  "radial-gradient(300px circle at var(--mx,50%) var(--my,50%), rgba(56,189,248,0.12), transparent 40%)",
+                  "radial-gradient(360px circle at var(--mx,50%) var(--my,50%), rgba(255,215,150,0.16), transparent 45%)",
               }}
             />
-            <h3 className="text-xl md:text-2xl font-semibold mb-2 text-white">
+            <h3
+              className="text-xl md:text-2xl font-semibold mb-2 text-[#f6ecd4]"
+              style={{
+                fontFamily: "'Playfair Display', serif",
+                textShadow: "0 0 15px rgba(255, 215, 150, 0.2)",
+              }}
+            >
               {project.title}
             </h3>
-            <p className="text-sm md:text-base text-white/70 mb-4">
-              {project.description}
-            </p>
+            <p className="text-sm md:text-base text-white/85 mb-4">{project.description}</p>
+
             <div className="flex flex-wrap gap-2 mb-5">
               {project.tech.map((t) => (
                 <TechBadge key={t} label={t} />
@@ -119,21 +128,19 @@ function ProjectCard({ project }) {
                 href={project.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 transition"
+                className="relative inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold
+                           text-black bg-gradient-to-b from-[#f5deb3] via-[#f5deb3] to-[#caa46c]
+                           hover:from-[#e9d39f] hover:to-[#f5deb3]
+                           shadow-[0_12px_28px_-12px_rgba(255,215,150,0.65)]
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-[#f5deb3]/70"
               >
-                View Project
-                <svg
-                  className="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M5 12h14M12 5l7 7-7 7"
-                  />
+                <span className="relative z-10">View Project</span>
+                {/* shiny sweep */}
+                <span className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
+                  <span className="absolute -inset-y-6 -left-10 w-16 rotate-12 bg-white/55 blur-md opacity-0 group-hover:opacity-100 transition animate-[sweep_1.1s_ease-in-out]" />
+                </span>
+                <svg className="h-4 w-4 text-black/80" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </a>
             )}
@@ -148,22 +155,21 @@ export default function Projects() {
   return (
     <section
       id="projects"
-      className="relative py-24 bg-black/60 bg-cover bg-center bg-blend-multiply"
+      className="relative py-24 bg-cover bg-center bg-blend-multiply overflow-hidden"
       style={{
-        backgroundImage:
-          "url('https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80')",
+        // match Login page background gradient
+        background:
+          "linear-gradient(to bottom right, #0b0b0e, #1c1917, #2a2523)",
       }}
-    >      {/* background layers */}
+    >
+      {/* background layers (warm aurora + subtle grid + golden blobs) */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-black to-indigo-950" />
-        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl bg-emerald-500/20" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-cyan-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(1100px_420px_at_50%_-150px,rgba(255,215,150,0.08),transparent_30%)]" />
+        <div className="absolute -top-24 -left-24 h-80 w-80 rounded-full blur-3xl bg-[#f5deb3]/20" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-emerald-500/10" />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage: "radial-gradient(#fff 1px, transparent 1px)",
-            backgroundSize: "18px 18px",
-          }}
+          style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "18px 18px" }}
         />
       </div>
 
@@ -177,28 +183,36 @@ export default function Projects() {
         <motion.h2
           className="text-center text-4xl sm:text-5xl font-extrabold tracking-tight mb-4"
           variants={item}
+          style={{ fontFamily: "'Playfair Display', serif" }}
         >
-          <span className="bg-gradient-to-r from-emerald-300 via-cyan-300 to-indigo-300 bg-clip-text text-transparent">
+          <span className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: "linear-gradient(90deg, #f5deb3, #fff4d0, #f5deb3)",
+                  textShadow: "0 0 15px rgba(255,215,150,0.2)",
+                }}>
             Our Projects
           </span>
         </motion.h2>
-        <motion.p
-          className="text-center text-white/70 max-w-2xl mx-auto mb-12"
-          variants={item}
-        >
-          A curated selection of platforms and products crafted with performance,
-          clarity, and delightful UI at the core.
+
+        <motion.p className="text-center text-white/80 max-w-2xl mx-auto mb-12" variants={item}>
+          A curated selection of platforms and products crafted with performance, clarity, and delightful UI at the core.
         </motion.p>
 
-        <motion.div
-          className="grid md:grid-cols-2 gap-8 lg:gap-10"
-          variants={container}
-        >
+        <motion.div className="grid md:grid-cols-2 gap-8 lg:gap-10" variants={container}>
           {projects.map((project) => (
             <ProjectCard key={project.title} project={project} />
           ))}
         </motion.div>
       </motion.div>
+
+      {/* local sweep keyframes */}
+      <style>{`
+        @keyframes sweep {
+          0%   { transform: translateX(0);   opacity: .0; }
+          10%  { opacity: .95; }
+          100% { transform: translateX(220%); opacity: 0; }
+        }
+      `}</style>
     </section>
   );
 }

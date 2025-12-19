@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchNewsAPI, fetchCurrentsAPI } from "../api/newsApi";
 
 const tabs = [
-  { id: "currents", label: "Tech News" },       // default & first
+  { id: "currents", label: "Tech News" }, // default
   { id: "newsapi",  label: "Cyber Security" },
 ];
 
@@ -41,7 +41,12 @@ function Card({ article, i }) {
 
   return (
     <motion.div
-      className="group relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md overflow-hidden shadow-[0_8px_40px_-12px_rgba(0,0,0,0.4)] hover:shadow-[0_12px_56px_-8px_rgba(0,0,0,0.5)] transition-shadow"
+      className="group relative rounded-2xl overflow-hidden
+                 bg-white/6 backdrop-blur-xl
+                 ring-1 ring-amber-300/15
+                 shadow-[0_12px_44px_-16px_rgba(251,191,36,0.35)]
+                 hover:shadow-[0_18px_64px_-14px_rgba(251,191,36,0.45)]
+                 transition-shadow"
       variants={fadeUp}
       custom={i}
       whileHover={{ y: -4 }}
@@ -69,25 +74,27 @@ function CardInner({ img, host, article, desc }) {
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         {host && (
-          <span className="absolute bottom-3 left-3 text-xs font-medium text-white/90 bg-black/50 border border-white/10 rounded-full px-2 py-1">
+          <span className="absolute bottom-3 left-3 text-[11px] font-medium
+                           text-amber-100 bg-black/40
+                           ring-1 ring-amber-300/25 rounded-full px-2 py-1">
             {host}
           </span>
         )}
       </div>
 
       <div className="p-4">
-        <h3 className="text-base sm:text-lg font-semibold text-white mb-2">
+        <h3 className="text-base sm:text-lg font-semibold text-amber-50 mb-2">
           {article?.title || "Untitled"}
         </h3>
-        <p className="text-sm text-white/75 mb-3">{desc}</p>
+        <p className="text-sm text-white/85 mb-3">{desc}</p>
         <div className="flex items-center justify-between">
-          <span className="text-xs text-white/50">
+          <span className="text-xs text-white/60">
             {article?.author ? `By ${article.author}` : ""}
           </span>
           {article?.url && (
-            <span className="inline-flex items-center gap-1 text-blue-300 text-sm group-hover:text-blue-200 transition-colors">
+            <span className="inline-flex items-center gap-1 text-amber-300 text-sm group-hover:text-amber-200 transition-colors">
               Read More
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                 <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
@@ -97,12 +104,12 @@ function CardInner({ img, host, article, desc }) {
         </div>
       </div>
 
-      {/* soft glow under cursor */}
+      {/* warm soft glow under cursor */}
       <div
-        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition duration-500"
+        className="pointer-events-none absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition duration-500"
         style={{
           background:
-            "radial-gradient(600px circle at var(--x,50%) var(--y,50%), rgba(99,102,241,0.18), transparent 40%)",
+            "radial-gradient(600px circle at var(--x,50%) var(--y,50%), rgba(251,191,36,0.0), transparent 0%)",
         }}
         onMouseMove={(e) => {
           const r = e.currentTarget.getBoundingClientRect();
@@ -119,12 +126,14 @@ function Skeleton({ i }) {
     <motion.div
       variants={fadeUp}
       custom={i}
-      className="relative rounded-2xl border border-white/10 bg-white/5 backdrop-blur-md overflow-hidden"
+      className="relative rounded-2xl overflow-hidden
+                 bg-white/6 backdrop-blur-xl
+                 ring-1 ring-amber-300/15"
     >
       <div className="h-44 w-full animate-pulse bg-gradient-to-r from-white/5 via-white/10 to-white/5" />
       <div className="p-4 space-y-2">
-        <div className="h-5 w-4/5 animate-pulse bg-white/10 rounded" />
-        <div className="h-4 w-full animate-pulse bg-white/10 rounded" />
+        <div className="h-5 w-4/5 animate-pulse bg-white/05 rounded" />
+        <div className="h-4 w-full animate-pulse bg-white/0 rounded" />
         <div className="h-4 w-2/3 animate-pulse bg-white/10 rounded" />
         <div className="h-4 w-24 ms-auto animate-pulse bg-white/10 rounded" />
       </div>
@@ -132,7 +141,7 @@ function Skeleton({ i }) {
   );
 }
 
-// Different comet direction than Services (drifts down-right softly)
+// golden comets drifting down-right
 const COMETS = [
   { top: "10%", left: "75%", delay: "0.2s", dur: "7.2s" },
   { top: "26%", left: "58%", delay: "1.6s", dur: "8s" },
@@ -173,27 +182,27 @@ const NewsFeed = () => {
   }, [source]);
 
   return (
-    <section className="relative isolate overflow-hidden py-20 sm:py-24 px-6 sm:px-8 bg-black">
-      {/* animated background */}
+    <section className="relative isolate overflow-hidden py-20 sm:py-24 px-6 sm:px-8 bg-[#0a0a0b]">
+      {/* animated background — warm aurora + grid */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-950 via-[#0b0f2a] to-[#1a1140]" />
-        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-violet-500/20" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-blue-500/20" />
+        <div className="absolute inset-0 bg-[radial-gradient(1100px_420px_at_50%_-150px,rgba(251,191,36,0.16),transparent_60%)]" />
+        <div className="absolute -top-28 -left-28 h-80 w-80 rounded-full blur-3xl bg-amber-400/5" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full blur-3xl bg-emerald-500/2" />
 
         <div
-          className="pointer-events-none absolute inset-0 opacity-20 mix-blend-screen dot-drift-slow"
+          className="pointer-events-none absolute inset-0 opacity-15 mix-blend-screen nf-dot-slow"
           style={{
             backgroundImage:
-              "radial-gradient(rgba(139,92,246,0.7) 1px, transparent 1px), radial-gradient(rgba(59,130,246,0.22) 1px, transparent 1px)",
+              "radial-gradient(rgba(251,191,36,0.05) 1px, transparent 1px), radial-gradient(rgba(16,185,129,0.35) 1px, transparent 1px)",
             backgroundSize: "12px 12px, 32px 32px",
             backgroundPosition: "0 0, 11px 11px",
           }}
         />
         <div
-          className="pointer-events-none absolute inset-0 opacity-15 mix-blend-screen dot-drift-fast"
+          className="pointer-events-none absolute inset-0 opacity-12 mix-blend-screen nf-dot-fast"
           style={{
             backgroundImage:
-              "radial-gradient(rgba(168,85,247,0.35) 1px, transparent 1px), radial-gradient(rgba(2,132,199,0.22) 1px, transparent 1px)",
+              "radial-gradient(rgba(251,191,36,0.3) 1px, transparent 1px), radial-gradient(rgba(99,102,241,0.22) 1px, transparent 1px)",
             backgroundSize: "14px 14px, 26px 26px",
             backgroundPosition: "6px 6px, 3px 3px",
           }}
@@ -219,7 +228,7 @@ const NewsFeed = () => {
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
         style={{
-          background: "linear-gradient(90deg, #c084fc 0%, #60a5fa 50%, #a78bfa 100%)",
+          background: "linear-gradient(90deg, #fde68a 0%, #fbbf24 40%, #fff 100%)",
           WebkitBackgroundClip: "text",
           WebkitTextFillColor: "transparent",
         }}
@@ -227,9 +236,9 @@ const NewsFeed = () => {
         Tech Trends
       </motion.h2>
 
-      {/* segmented control */}
+      {/* segmented control (glassy pill; active = white pill on amber ring) */}
       <div className="mx-auto mb-10 flex justify-center">
-        <div className="relative inline-flex rounded-full border border-white/15 bg-white/5 backdrop-blur px-1 py-1">
+        <div className="relative inline-flex rounded-full ring-1 ring-amber-300/20 bg-white/6 backdrop-blur-xl px-1 py-1 shadow-[0_12px_28px_-16px_rgba(251,191,36,0.35)]">
           {tabs.map((t) => {
             const active = source === t.id;
             return (
@@ -237,7 +246,7 @@ const NewsFeed = () => {
                 key={t.id}
                 onClick={() => setSource(t.id)}
                 className={`relative z-10 px-4 sm:px-5 py-2 text-sm sm:text-[0.95rem] font-medium transition-colors ${
-                  active ? "text-black" : "text-white/80 hover:text-white"
+                  active ? "text-black" : "text-white/85 hover:text-white"
                 }`}
                 aria-pressed={active}
                 type="button"
@@ -245,8 +254,8 @@ const NewsFeed = () => {
                 {active && (
                   <motion.span
                     layoutId="nf-pill"
-                    className="absolute inset-0 z-[-1] rounded-full bg-white shadow"
-                    transition={{ type: "spring", stiffness: 500, damping: 35 }}
+                    className="absolute inset-0 z-[-1] rounded-full bg-gradient-to-b from-white to-white shadow"
+                    transition={{ type: "spring", stiffness: 520, damping: 36 }}
                     aria-hidden="true"
                   />
                 )}
@@ -281,7 +290,7 @@ const NewsFeed = () => {
         </motion.div>
       </AnimatePresence>
 
-      {/* Local CSS for dot drift + comets */}
+      {/* Local CSS: dot drift + comets */}
       <style>{`
         @keyframes nf-dot-drift-slow {
           0% { background-position: 0 0, 11px 11px; }
@@ -291,8 +300,8 @@ const NewsFeed = () => {
           0% { background-position: 6px 6px, 3px 3px; }
           100% { background-position: 30px 20px, 18px 14px; }
         }
-        .dot-drift-slow { animation: nf-dot-drift-slow 32s linear infinite; }
-        .dot-drift-fast { animation: nf-dot-drift-fast 22s linear infinite; }
+        .nf-dot-slow { animation: nf-dot-drift-slow 32s linear infinite; }
+        .nf-dot-fast { animation: nf-dot-drift-fast 22s linear infinite; }
 
         @keyframes nf-shoot {
           0%   { transform: translate3d(0,0,0) rotate(18deg); opacity: 0; }
@@ -303,10 +312,10 @@ const NewsFeed = () => {
           position: absolute;
           width: 150px; height: 2px;
           background: linear-gradient(90deg,
-            rgba(96,165,250,0.95),
-            rgba(139,92,246,0.55),
-            rgba(139,92,246,0));
-          filter: drop-shadow(0 0 6px rgba(96,165,250,0.6));
+            rgba(251,191,36,0.95),
+            rgba(251,191,36,0.55),
+            rgba(251,191,36,0));
+          filter: drop-shadow(0 0 6px rgba(251,191,36,0.6));
           transform: rotate(18deg);
           animation-name: nf-shoot;
           animation-timing-function: linear;
@@ -317,7 +326,7 @@ const NewsFeed = () => {
           position: absolute; right: 0; top: -3px;
           width: 8px; height: 8px; border-radius: 9999px;
           background: white;
-          box-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(96,165,250,0.7);
+          box-shadow: 0 0 12px rgba(255,255,255,0.9), 0 0 24px rgba(251,191,36,0.7);
         }
       `}</style>
     </section>
