@@ -2,6 +2,7 @@
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
 import Lottie from "lottie-react";
+import { useNavigate } from "react-router-dom"; // ✅ ADD
 import shoppingAnimation from "../assets/lottie/webdev.json";
 
 const fadeUp = {
@@ -30,6 +31,7 @@ const btnGlass =
 
 export default function LandingHero({ onOpenStartProject }) {
   const glowRef = useRef(null);
+  const navigate = useNavigate(); // ✅ ADD
 
   const onMove = (e) => {
     const el = glowRef.current;
@@ -171,7 +173,12 @@ export default function LandingHero({ onOpenStartProject }) {
                 custom={4}
                 className="mt-9 flex flex-wrap items-center gap-4"
               >
-                <button onClick={onOpenStartProject} className={btnPrimary}>
+                {/* ✅ ONLY CHANGE IS THIS onClick */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/start-project")}
+                  className={btnPrimary}
+                >
                   <span className="relative z-10">Start a project</span>
                   {/* shiny sweep */}
                   <span className="pointer-events-none absolute inset-0 rounded-full overflow-hidden">
@@ -235,7 +242,12 @@ export default function LandingHero({ onOpenStartProject }) {
                 <Lottie
                   animationData={shoppingAnimation}
                   loop
-                  style={{ width: "100%", maxWidth: 420, height: "auto", marginInline: "auto" }}
+                  style={{
+                    width: "100%",
+                    maxWidth: 420,
+                    height: "auto",
+                    marginInline: "auto",
+                  }}
                 />
               </motion.div>
 

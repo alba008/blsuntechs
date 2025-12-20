@@ -1,57 +1,36 @@
-// src/App.js
-import React, { useState } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+// src/App.jsx
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
-import Header from "./components/header";
-import LandingHero from "./components/LandingHero";
-import About from "./components/About";
-import Services from "./components/Services";
-import Projects from "./components/Projects";
-import NewsFeed from "./components/NewsFeed";
-import Contact from "./components/contact";
+import Home from "./pages/Home";
+import StartProjectPage from "./pages/StartProjectPage";
+import ProjectPayment from "./pages/ProjectPayment";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancel from "./pages/PaymentCancel";
 import AdminEnquiries from "./pages/AdminEnquiries";
-import StartProjectModal from "./components/StartProjectModal";
-
-function Home({ onOpenStartProject }) {
-  return (
-    <>
-      <LandingHero onOpenStartProject={onOpenStartProject} />
-      <About />
-      <Services />
-      <Projects />
-      <NewsFeed />
-      <Contact onOpenStartProject={onOpenStartProject} />
-    </>
-  );
-}
+console.log({ Home, StartProjectPage, ProjectPayment, PaymentSuccess, PaymentCancel, AdminEnquiries });
 
 export default function App() {
-  const [startOpen, setStartOpen] = useState(false);
-  const [presetService, setPresetService] = useState("");
-
-  const openStart = (serviceName = "") => {
-    setPresetService(serviceName);
-    setStartOpen(true);
-  };
-
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-black to-indigo-950 text-white">
-        <Header onOpenStartProject={() => openStart()} />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home onOpenStartProject={() => openStart()} />} />
-            <Route path="/admin/enquiries" element={<AdminEnquiries />} />
-          </Routes>
-        </main>
+      <Routes>
+        {/* ✅ Home landing page */}
+        <Route path="/" element={<Home />} />
 
-        {/* The modal sits once at the root so any page can open it */}
-        <StartProjectModal
-          open={startOpen}
-          onClose={() => setStartOpen(false)}
-          presetService={presetService}
-        />
-      </div>
+        {/* ✅ Main flows */}
+        <Route path="/start-project" element={<StartProjectPage />} />
+        <Route path="/pay" element={<ProjectPayment />} />
+
+        {/* ✅ Payment outcomes */}
+        <Route path="/payment/success" element={<PaymentSuccess />} />
+        <Route path="/payment/cancel" element={<PaymentCancel />} />
+
+        {/* ✅ Admin */}
+        <Route path="/admin/enquiries" element={<AdminEnquiries />} />
+
+        {/* ✅ Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </BrowserRouter>
+    
   );
 }

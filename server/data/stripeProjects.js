@@ -1,7 +1,21 @@
-// server/data/stripeProjects.js
 export const STRIPE_PROJECTS = [
-    { id: "portfolio", label: "BlsunTech Portfolio Website", priceId: "10,000" },
-    { id: "security-audit", label: "Security Audit", priceId: "1,000" },
-    { id: "api-build", label: "API Build / Integration", priceId: "5,000" },
+    {
+      id: "portfolio",
+      label: "Portfolio Website",
+      amount: 10000, // USD
+      currency: "usd",
+    },
+    {
+      id: "security-audit",
+      label: "Security Audit",
+      amount: 1000,
+      currency: "usd",
+    },
+    {
+      id: "api-build",
+      label: "API Build / Integration",
+      amount: 5000,
+      currency: "usd",
+    },
   ];
   

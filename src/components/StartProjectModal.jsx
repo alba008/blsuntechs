@@ -1,505 +1,716 @@
 // src/components/StartProjectModal.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// Same-origin in prod; localhost in dev only if explicitly set
-const API_BASE =
-  typeof process !== "undefined" && process.env?.REACT_APP_API_BASE
-    ? process.env.REACT_APP_API_BASE
-    : "";
+/**
+ * server/index.js mounts app at /api:
+ *   server.use("/api", app)
+ * so:
+ *   GET  /api/stripe/projects
+ *   POST /api/start-project
+ *   POST /api/stripe/create-checkout-session
+ */
+const API_BASE = (process.env.REACT_APP_API_BASE || "").replace(/\/$/, "");
+const API = API_BASE ? (API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`) : "/api";
 
-/* ---------------- Theme tokens (gold + glass) ---------------- */
-// const GOLD = "#f5deb3";
-const GOLD_SOFT = "rgba(245,222,179,.35)";
-const TEXT = "rgba(255,255,255,.96)";
-const TEXT_DIM = "rgba(255,255,255,.75)";
-const CARD_BG = "rgba(255,255,255,.06)";
-const CARD_BORDER = "rgba(255,255,255,.10)";
+// Theme tokens
+const TEXT = "rgba(244,246,248,0.96)";
+const TEXT_DIM = "rgba(244,246,248,0.72)";
+const BORDER = "rgba(244,246,248,0.12)";
+const BG = "rgba(255,255,255,0.04)";
 
-/* ---------------- Helpers ---------------- */
-function FieldLabel({ htmlFor, children }) {
+function fmtMoney(amount, currency = "USD") {
+  const n = Number(amount);
+  if (!Number.isFinite(n)) return "—";
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+      maximumFractionDigits: 0,
+    }).format(n);
+  } catch {
+    return `${n} ${currency}`;
+  }
+}
+
+function Spinner() {
   return (
-    <label
-      htmlFor={htmlFor}
-      className="block text-sm mb-1"
-      style={{ color: TEXT_DIM }}
-    >
-      {children}
-    </label>
+    <span
+      aria-hidden
+      style={{
+        width: 14,
+        height: 14,
+        borderRadius: 999,
+        border: "2px solid rgba(255,255,255,0.25)",
+        borderTopColor: "rgba(255,255,255,0.95)",
+        display: "inline-block",
+        animation: "spin 0.8s linear infinite",
+      }}
+    />
   );
 }
 
-function InputBase(props) {
+function Input({ style, ...props }) {
   return (
     <input
       {...props}
-      className={
-        "w-full rounded-lg border px-3 py-2 text-white outline-none " +
-        "focus:ring-2 " +
-        (props.className || "")
-      }
       style={{
-        background: "rgba(255,255,255,.06)",
-        borderColor: CARD_BORDER,
-        ...(props.style || {}),
+        width: "100%",
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.06)",
+        color: TEXT,
+        padding: "11px 12px",
+        outline: "none",
+        ...style,
       }}
     />
   );
 }
 
-function SelectBase(props) {
+function Select({ style, children, ...props }) {
   return (
     <select
       {...props}
-      className={
-        "w-full rounded-lg border px-3 py-2 text-white outline-none " +
-        "focus:ring-2 " +
-        (props.className || "")
-      }
       style={{
-        background: "rgba(255,255,255,.06)",
-        borderColor: CARD_BORDER,
-        ...(props.style || {}),
+        width: "100%",
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.06)",
+        color: TEXT,
+        padding: "11px 12px",
+        outline: "none",
+        ...style,
       }}
-    />
+    >
+      {children}
+    </select>
   );
 }
 
-function TextAreaBase(props) {
+function TextArea({ style, ...props }) {
   return (
     <textarea
       {...props}
-      className={
-        "w-full rounded-lg border px-3 py-2 text-white outline-none " +
-        "focus:ring-2 " +
-        (props.className || "")
-      }
       style={{
-        background: "rgba(255,255,255,.06)",
-        borderColor: CARD_BORDER,
-        ...(props.style || {}),
+        width: "100%",
+        minHeight: 110,
+        resize: "vertical",
+        borderRadius: 12,
+        border: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.06)",
+        color: TEXT,
+        padding: "11px 12px",
+        outline: "none",
+        ...style,
       }}
     />
   );
 }
 
-export default function StartProjectModal({ open, onClose, presetService }) {
+function Label({ children }) {
+  return <div style={{ fontSize: 13, color: TEXT_DIM, marginBottom: 6 }}>{children}</div>;
+}
+
+function Pill({ children }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        borderRadius: 999,
+        padding: "6px 10px",
+        border: `1px solid ${BORDER}`,
+        background: "rgba(255,255,255,0.04)",
+        fontSize: 12.5,
+        color: TEXT_DIM,
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
+export default function StartProjectModal({ open, onClose }) {
+  const panelRef = useRef(null);
+
+  const [projects, setProjects] = useState([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [projectsErr, setProjectsErr] = useState("");
+
+  // flow: enquiry first OR pay now
+  const [flow, setFlow] = useState("enquiry"); // "enquiry" | "pay"
+
   const [form, setForm] = useState({
     name: "",
     email: "",
     company: "",
-    service: presetService || "",
-    budget: "",
-    timeline: "",
+    projectId: "",
     message: "",
     botcheck: "",
   });
 
-  const [status, setStatus] = useState({ sending: false, done: false, error: "" });
-  const [serverInfo, setServerInfo] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
+  const [refId, setRefId] = useState("");
 
-  const dialogRef = useRef(null);
-  const titleId = "start-project-title";
+  const selectedProject = useMemo(() => {
+    return projects.find((p) => String(p.id) === String(form.projectId)) || null;
+  }, [projects, form.projectId]);
+
+  const priceText = useMemo(() => {
+    if (!selectedProject) return "—";
+    const currency = (selectedProject.currency || "usd").toUpperCase();
+    return fmtMoney(selectedProject.amount, currency);
+  }, [selectedProject]);
+
+  const projectOk = !!form.projectId;
+  const nameOk = form.name.trim().length >= 2;
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+  const messageOk = form.message.trim().length >= 8;
+
+  // Pay now: require only (project + name) because your stripe route requires name.
+  const canPayNow = !busy && projectOk && nameOk;
+
+  // Enquiry: require full info
+  const canSubmitEnquiry = !busy && projectOk && nameOk && emailOk && messageOk;
 
   useEffect(() => {
-    if (open) {
-      setForm((f) => ({ ...f, service: presetService || f.service }));
-      setStatus({ sending: false, done: false, error: "" });
-      setServerInfo(null);
+    if (!open) return;
 
-      // prevent page behind from scrolling
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
+    setErr("");
+    setDone(false);
+    setRefId("");
+    setProjectsErr("");
+    setFlow("enquiry");
+    setForm((f) => ({ ...f, botcheck: "" }));
 
-      // focus dialog for accessibility & capture Esc
-      dialogRef.current?.focus();
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    setTimeout(() => panelRef.current?.focus?.(), 0);
 
-      const onKeyDown = (e) => {
-        if (e.key === "Escape") onClose?.();
-      };
-      window.addEventListener("keydown", onKeyDown);
+    let alive = true;
+    (async () => {
+      try {
+        setLoadingProjects(true);
+        const res = await fetch(`${API}/stripe/projects`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data?.error || "Failed to load packages.");
 
-      return () => {
-        document.body.style.overflow = prev || "";
-        window.removeEventListener("keydown", onKeyDown);
-      };
+        const list = Array.isArray(data?.projects) ? data.projects : [];
+        if (!alive) return;
+
+        setProjects(list);
+        setForm((prevForm) => ({
+          ...prevForm,
+          projectId: prevForm.projectId || (list[0]?.id ? String(list[0].id) : ""),
+        }));
+      } catch (e) {
+        if (!alive) return;
+        setProjects([]);
+        setProjectsErr(e?.message || "Failed to load packages.");
+      } finally {
+        if (alive) setLoadingProjects(false);
+      }
+    })();
+
+    const onKeyDown = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      alive = false;
+      document.body.style.overflow = prev || "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
+
+  function update(e) {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+  }
+
+  // ✅ Pay-now: create checkout session and redirect to Stripe directly
+  async function payNow() {
+    setErr("");
+    setBusy(true);
+
+    try {
+      const res = await fetch(`${API}/stripe/create-checkout-session`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // your stripe route requires name + projectId
+        body: JSON.stringify({
+          name: form.name.trim(),
+          projectId: String(form.projectId),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Checkout failed (${res.status})`);
+      if (!data?.url) throw new Error("Missing Stripe checkout URL from server.");
+
+      window.location.assign(data.url); // ✅ direct to Stripe
+    } catch (e) {
+      setErr(e?.message || "Checkout failed.");
+      setBusy(false);
     }
-  }, [presetService, open, onClose]);
+  }
 
-  const update = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const submit = async (e) => {
+  // Enquiry: save intake only (no payment)
+  async function submitEnquiry(e) {
     e.preventDefault();
     if (form.botcheck) return;
 
-    setStatus({ sending: true, done: false, error: "" });
-    setServerInfo(null);
+    setErr("");
+    setBusy(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/start-project`, {
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        company: form.company.trim(),
+        flow: "enquiry",
+        projectId: String(form.projectId),
+        projectLabel: selectedProject?.label || "",
+        projectAmount: selectedProject?.amount ?? null,
+        projectCurrency: selectedProject?.currency || "usd",
+        message: form.message.trim(),
+      };
+
+      const res = await fetch(`${API}/start-project`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
+
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || `Request failed (${res.status})`);
 
-      setServerInfo({
-        id: data?.id || "N/A",
-        receivedAt: data?.receivedAt || new Date().toISOString(),
-      });
-      setStatus({ sending: false, done: true, error: "" });
-    } catch (err) {
-      setStatus({ sending: false, done: false, error: err.message || "Failed to send" });
+      const id = data?.id || "";
+      setRefId(id);
+      setDone(true);
+      setBusy(false);
+    } catch (e2) {
+      setBusy(false);
+      setErr(e2?.message || "Failed to submit.");
     }
-  };
-
-  const copyRef = async () => {
-    if (!serverInfo?.id) return;
-    try {
-      await navigator.clipboard.writeText(serverInfo.id);
-      alert("Reference ID copied!");
-    } catch {}
-  };
+  }
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
-      aria-labelledby={titleId}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        color: TEXT,
+      }}
     >
-      {/* Backdrop with warm aurora */}
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* backdrop */}
       <button
-        className="fixed inset-0"
+        type="button"
+        aria-label="Close"
         onClick={onClose}
-        aria-label="Close modal backdrop"
         style={{
+          position: "fixed",
+          inset: 0,
+          border: "none",
+          cursor: "pointer",
           background:
-            "radial-gradient(900px 420px at 50% -10%, rgba(251,191,26,0.12), transparent 30%), rgba(0,0,0,.7)",
-          backdropFilter: "blur(4px)",
+            "radial-gradient(1100px 520px at 20% -10%, rgba(201,162,77,0.18), transparent 55%), radial-gradient(900px 420px at 100% 10%, rgba(120,180,255,0.14), transparent 55%), rgba(0,0,0,0.72)",
+          backdropFilter: "blur(6px)",
         }}
       />
 
-      {/* Frame with warm gradient border + inner glass card */}
+      {/* frame */}
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-[1px]"
         style={{
+          position: "relative",
+          width: "100%",
+          maxWidth: 820,
+          borderRadius: 24,
+          padding: 1,
           background:
-            "linear-gradient(135deg, rgba(4,2,17,.05), rgba(202,164,108,.28), rgba(2,2,1,.05))",
-          boxShadow: "0 18px 70px -22px rgba(0,0,0,.06)",
+            "linear-gradient(135deg, rgba(255,255,255,0.10), rgba(201,162,77,0.30), rgba(120,180,255,0.16))",
+          boxShadow: "0 24px 80px -28px rgba(0,0,0,0.85)",
         }}
       >
         <div
-          ref={dialogRef}
+          ref={panelRef}
           tabIndex={-1}
-          className="rounded-3xl p-6 sm:p-7"
           style={{
-            background: CARD_BG,
-            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: 24,
+            padding: 20,
+            background: BG,
+            border: `1px solid ${BORDER}`,
+            maxHeight: "90vh",
+            overflowY: "auto",
             outline: "none",
-            position: "relative",
           }}
         >
-          {/* Cursor-follow highlight on hover */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute -inset-px rounded-3xl"
-            style={{
-              background:
-                "radial-gradient(580px 220px at var(--mx,50%) var(--my,0%), rgba(245,222,179,.12), transparent 55%)",
-              opacity: 0.8,
-            }}
-          />
-
           {/* Header */}
-          <div
-            className="flex items-start justify-between gap-4"
-            onMouseMove={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              const x = e.clientX - r.left;
-              const y = e.clientY - r.top;
-              e.currentTarget.parentElement?.style.setProperty("--mx", `${x}px`);
-              e.currentTarget.parentElement?.style.setProperty("--my", `${y}px`);
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "flex-start" }}>
             <div>
-              <h3
-                id={titleId}
-                className="text-xl sm:text-2xl font-extrabold"
-                style={{ color: TEXT, letterSpacing: ".2px" }}
-              >
-                Start a Project
-              </h3>
-              <p className="text-sm mt-1" style={{ color: TEXT_DIM }}>
-                Tell us a bit about your goals and timeline. We’ll reply within 48 hours.
-              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <Pill>Stripe packages</Pill>
+                <Pill>Direct checkout</Pill>
+                <Pill>{flow === "pay" ? "Fast lane" : "Onboarding first"}</Pill>
+              </div>
+
+              <div style={{ fontSize: 24, fontWeight: 950, letterSpacing: -0.2 }}>
+                Start a BlsunTech project
+              </div>
+
+              <div style={{ marginTop: 8, color: TEXT_DIM, lineHeight: 1.6, maxWidth: 640 }}>
+                {flow === "pay"
+                  ? "Select a package and check out securely in seconds."
+                  : "Send an enquiry for onboarding. Payment comes after scope is confirmed."}
+              </div>
             </div>
 
             <button
-              onClick={onClose}
-              className="rounded-full px-3 py-1.5 text-sm"
-              aria-label="Close modal"
               type="button"
+              onClick={onClose}
               style={{
+                borderRadius: 999,
+                padding: "8px 12px",
+                border: `1px solid ${BORDER}`,
+                background: "rgba(255,255,255,0.06)",
                 color: TEXT,
-                background: "rgba(255,255,255,.08)",
-                border: `1px solid ${CARD_BORDER}`,
+                cursor: "pointer",
+                fontWeight: 900,
               }}
             >
               ✕
             </button>
           </div>
 
-          {/* Body */}
-          {status.done ? (
-            <div className="mt-6 space-y-4">
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  border: `1px solid ${GOLD_SOFT}`,
-                  background:
-                    "linear-gradient(180deg, rgba(245,222,179,.14), rgba(245,222,179,.08))",
-                  color: TEXT,
-                }}
-              >
-                <div className="font-semibold">
-                  Thank you, {form.name || "friend"}! 🎉
-                </div>
-                <div style={{ color: TEXT_DIM }}>
-                  We’ve received your brief for{" "}
-                  <span className="font-medium" style={{ color: TEXT }}>
-                    {form.service || "your project"}
-                  </span>
-                  .
-                </div>
-              </div>
+          {/* Errors */}
+          {projectsErr ? (
+            <div
+              style={{
+                marginTop: 14,
+                borderRadius: 14,
+                padding: 12,
+                border: "1px solid rgba(255,120,120,0.30)",
+                background: "rgba(255,80,80,0.10)",
+              }}
+            >
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>Couldn’t load packages</div>
+              <div style={{ color: TEXT_DIM }}>{projectsErr}</div>
+            </div>
+          ) : null}
 
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  border: `1px solid ${CARD_BORDER}`,
-                  background: "rgba(255,255,255,.05)",
-                }}
-              >
-                <label className="text-sm mb-1 block" style={{ color: TEXT_DIM }}>
-                  Reference ID
-                </label>
-                <div className="flex items-center justify-between gap-3">
-                  <code className="font-mono text-sm break-all" style={{ color: TEXT }}>
-                    {serverInfo?.id}
-                  </code>
-                  <button
-                    onClick={copyRef}
-                    className="rounded-full px-3 py-1.5 text-xs"
-                    type="button"
-                    style={{
-                      color: TEXT,
-                      background: "rgba(255,255,255,.08)",
-                      border: `1px solid ${CARD_BORDER}`,
-                    }}
-                  >
-                    Copy
-                  </button>
-                </div>
-                <div className="text-xs mt-2" style={{ color: TEXT_DIM }}>
-                  Received: {new Date(serverInfo?.receivedAt).toLocaleString()}
-                </div>
-              </div>
+          {err ? (
+            <div
+              style={{
+                marginTop: 14,
+                borderRadius: 14,
+                padding: 12,
+                border: "1px solid rgba(255,120,120,0.30)",
+                background: "rgba(255,80,80,0.10)",
+              }}
+            >
+              <div style={{ fontWeight: 900, marginBottom: 4 }}>We couldn’t proceed</div>
+              <div style={{ color: TEXT_DIM }}>{err}</div>
+            </div>
+          ) : null}
 
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={onClose}
-                  className="rounded-full px-5 py-2 font-semibold"
-                  type="button"
-                  style={{
-                    color: "#121212",
-                    background:
-                      "linear-gradient(90deg, #f5deb3, #caa46c, #f5deb3)",
-                    boxShadow: "0 0 20px rgba(255,215,150,0.25)",
-                  }}
-                >
-                  Close
-                </button>
+          {/* Flow selector */}
+          <div
+            style={{
+              marginTop: 14,
+              border: `1px solid ${BORDER}`,
+              background: "rgba(0,0,0,0.18)",
+              borderRadius: 14,
+              padding: 12,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div>
+              <div style={{ fontWeight: 950, marginBottom: 4 }}>Choose your path</div>
+              <div style={{ color: TEXT_DIM, fontSize: 12.5, lineHeight: 1.45 }}>
+                Pay now is fastest. Enquiry first is best for new clients.
               </div>
             </div>
-          ) : (
-            <form onSubmit={submit} className="mt-6 space-y-4" noValidate>
-              {/* honeypot */}
-              <input
-                type="text"
-                id="botcheck"
-                name="botcheck"
-                autoComplete="off"
-                className="hidden"
-                value={form.botcheck}
-                onChange={update}
-                tabIndex={-1}
-              />
 
-              {/* grid: keep two-up feel on small if you like; or use sm:grid-cols-2 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel htmlFor="name">Name</FieldLabel>
-                  <InputBase
-                    id="name"
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setFlow("enquiry")}
+                disabled={busy}
+                style={{
+                  borderRadius: 999,
+                  padding: "8px 10px",
+                  border: `1px solid ${flow === "enquiry" ? "rgba(201,162,77,0.55)" : BORDER}`,
+                  background: flow === "enquiry" ? "rgba(201,162,77,0.16)" : "rgba(255,255,255,0.04)",
+                  color: TEXT,
+                  cursor: busy ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                Enquiry first
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFlow("pay")}
+                disabled={busy}
+                style={{
+                  borderRadius: 999,
+                  padding: "8px 10px",
+                  border: `1px solid ${flow === "pay" ? "rgba(201,162,77,0.55)" : BORDER}`,
+                  background: flow === "pay" ? "rgba(201,162,77,0.16)" : "rgba(255,255,255,0.04)",
+                  color: TEXT,
+                  cursor: busy ? "not-allowed" : "pointer",
+                  fontWeight: 950,
+                }}
+              >
+                Pay now
+              </button>
+            </div>
+          </div>
+
+          {/* Package selector (always visible) */}
+          <div style={{ marginTop: 12 }}>
+            <Label>Choose a package *</Label>
+            <Select
+              name="projectId"
+              value={form.projectId}
+              onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
+              disabled={loadingProjects || !projects.length || busy}
+            >
+              {!projects.length ? (
+                <option value="">{loadingProjects ? "Loading packages…" : "No packages available"}</option>
+              ) : null}
+              {projects.map((p) => (
+                <option key={String(p.id)} value={String(p.id)}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
+
+            <div
+              style={{
+                marginTop: 10,
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+                border: `1px solid ${BORDER}`,
+                background: "rgba(255,255,255,0.03)",
+                borderRadius: 14,
+                padding: 12,
+              }}
+            >
+              <div style={{ color: TEXT_DIM, fontSize: 12.5 }}>
+                Price
+                <div style={{ color: TEXT, fontWeight: 950, fontSize: 18, marginTop: 2 }}>{priceText}</div>
+              </div>
+
+              <div style={{ color: TEXT_DIM, fontSize: 12.5 }}>
+                Checkout
+                <div style={{ color: TEXT, fontWeight: 900, marginTop: 2 }}>
+                  {flow === "pay" ? "Immediate" : "After onboarding (optional)"}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ✅ PAY NOW = minimal fields + direct Stripe redirect */}
+          {flow === "pay" ? (
+            <div style={{ marginTop: 14, borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
+              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(12, minmax(0, 1fr))" }}>
+                <div style={{ gridColumn: "span 12" }}>
+                  <Label>Your name (for receipt) *</Label>
+                  <Input
                     name="name"
-                    required
-                    autoComplete="name"
                     value={form.name}
                     onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
+                    placeholder="Full name"
+                    autoComplete="name"
+                    disabled={busy}
                   />
-                </div>
-                <div>
-                  <FieldLabel htmlFor="email">Email</FieldLabel>
-                  <InputBase
-                    id="email"
-                    type="email"
-                    name="email"
-                    required
-                    autoComplete="email"
-                    value={form.email}
-                    onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
-                  />
+                  <div style={{ marginTop: 6, fontSize: 12.5, color: TEXT_DIM }}>
+                    Stripe requires a name for checkout metadata.
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel htmlFor="company">Company</FieldLabel>
-                  <InputBase
-                    id="company"
-                    name="company"
-                    autoComplete="organization"
-                    value={form.company}
-                    onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
-                  />
-                </div>
-                <div>
-                  <FieldLabel htmlFor="service">Service</FieldLabel>
-                  <SelectBase
-                    id="service"
-                    name="service"
-                    required
-                    value={form.service}
-                    onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
-                  >
-                    <option value="" disabled>
-                      Select a service
-                    </option>
-                    <option>Web & App Development</option>
-                    <option>E-commerce & Payments</option>
-                    <option>AI, Data & Analytics</option>
-                    <option>Cybersecurity</option>
-                    <option>Cloud & DevOps</option>
-                    <option>No-Code & Automation</option>
-                    <option>PropTech Solutions</option>
-                    <option>Energy & IoT</option>
-                  </SelectBase>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel htmlFor="budget">Budget</FieldLabel>
-                  <SelectBase
-                    id="budget"
-                    name="budget"
-                    required
-                    value={form.budget}
-                    onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
-                  >
-                    <option value="" disabled>
-                      Select budget
-                    </option>
-                    <option>Under $5k</option>
-                    <option>$5k – $15k</option>
-                    <option>$15k – $40k</option>
-                    <option>$40k+</option>
-                  </SelectBase>
-                </div>
-                <div>
-                  <FieldLabel htmlFor="timeline">Timeline</FieldLabel>
-                  <SelectBase
-                    id="timeline"
-                    name="timeline"
-                    required
-                    value={form.timeline}
-                    onChange={update}
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/10"
-                  >
-                    <option value="" disabled>
-                      Select timeline
-                    </option>
-                    <option>ASAP</option>
-                    <option>2–4 weeks</option>
-                    <option>1–3 months</option>
-                    <option>3+ months</option>
-                  </SelectBase>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <FieldLabel htmlFor="message">Brief</FieldLabel>
-                  <TextAreaBase
-                    id="message"
-                    name="message"
-                    rows={4}
-                    required
-                    value={form.message}
-                    onChange={update}
-                    placeholder="Describe the problem, users, and success criteria…"
-                    style={{ color: TEXT }}
-                    className="focus:ring-amber-300/40"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-2">
+              <div style={{ marginTop: 12, display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-full px-4 py-2"
+                  disabled={busy}
                   style={{
+                    borderRadius: 12,
+                    padding: "10px 12px",
+                    border: `1px solid ${BORDER}`,
+                    background: "rgba(255,255,255,0.06)",
                     color: TEXT,
-                    background: "rgba(255,255,255,.08)",
-                    border: `1px solid ${CARD_BORDER}`,
+                    cursor: busy ? "not-allowed" : "pointer",
+                    fontWeight: 900,
                   }}
                 >
                   Cancel
                 </button>
+
                 <button
-                  disabled={status.sending}
-                  className="rounded-full px-5 py-2 font-semibold disabled:opacity-60"
+                  type="button"
+                  onClick={payNow}
+                  disabled={!canPayNow}
                   style={{
-                    color: "#121212",
-                    background:
-                      "linear-gradient(90deg, #f5deb3, #caa46c, #f5deb3)",
-                    boxShadow: "0 0 20px rgba(255,215,150,0.25)",
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                    border: "1px solid rgba(201,162,77,0.55)",
+                    background: canPayNow
+                      ? "linear-gradient(90deg, rgba(201,162,77,0.98), rgba(245,222,179,0.92))"
+                      : "rgba(255,255,255,0.10)",
+                    color: canPayNow ? "#0e1116" : "rgba(244,246,248,0.55)",
+                    cursor: canPayNow ? "pointer" : "not-allowed",
+                    fontWeight: 950,
+                    boxShadow: canPayNow ? "0 14px 36px -22px rgba(201,162,77,0.65)" : "none",
+                    minWidth: 280,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
                   }}
                 >
-                  {status.sending ? "Sending…" : "Submit"}
+                  {busy ? (
+                    <>
+                      <Spinner /> Redirecting…
+                    </>
+                  ) : (
+                    <>Continue to secure checkout ({priceText}) →</>
+                  )}
                 </button>
               </div>
+            </div>
+          ) : (
+            /* ✅ ENQUIRY = full intake form */
+            <form onSubmit={submitEnquiry} style={{ marginTop: 14 }}>
+              <input
+                type="text"
+                name="botcheck"
+                value={form.botcheck}
+                onChange={update}
+                autoComplete="off"
+                tabIndex={-1}
+                style={{ display: "none" }}
+              />
 
-              {status.error && (
-                <div className="text-sm mt-2" style={{ color: "rgba(255,130,130,.95)" }}>
-                  {status.error}
+              {done ? (
+                <div
+                  style={{
+                    marginTop: 8,
+                    borderRadius: 18,
+                    padding: 14,
+                    border: "1px solid rgba(201,162,77,0.40)",
+                    background: "linear-gradient(180deg, rgba(201,162,77,0.16), rgba(255,255,255,0.02))",
+                  }}
+                >
+                  <div style={{ fontWeight: 950, marginBottom: 6 }}>Enquiry received.</div>
+                  <div style={{ color: TEXT_DIM, lineHeight: 1.55 }}>
+                    We’ll follow up for onboarding and scope confirmation.
+                  </div>
+                  {refId ? (
+                    <div style={{ marginTop: 8, fontSize: 12.5, color: TEXT_DIM }}>
+                      Reference: <code style={{ color: TEXT }}>{refId}</code>
+                    </div>
+                  ) : null}
+                  <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      style={{
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                        border: `1px solid ${BORDER}`,
+                        background: "rgba(255,255,255,0.06)",
+                        color: TEXT,
+                        cursor: "pointer",
+                        fontWeight: 900,
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
-              )}
+              ) : null}
+
+              <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(12, minmax(0, 1fr))", marginTop: 14 }}>
+                <div style={{ gridColumn: "span 6" }}>
+                  <Label>Your name *</Label>
+                  <Input name="name" value={form.name} onChange={update} placeholder="Full name" autoComplete="name" disabled={busy} />
+                </div>
+
+                <div style={{ gridColumn: "span 6" }}>
+                  <Label>Email *</Label>
+                  <Input name="email" value={form.email} onChange={update} placeholder="you@company.com" autoComplete="email" disabled={busy} />
+                </div>
+
+                <div style={{ gridColumn: "span 12" }}>
+                  <Label>Company (optional)</Label>
+                  <Input name="company" value={form.company} onChange={update} placeholder="Company / organization" autoComplete="organization" disabled={busy} />
+                </div>
+
+                <div style={{ gridColumn: "span 12" }}>
+                  <Label>Quick note *</Label>
+                  <TextArea name="message" value={form.message} onChange={update} placeholder="Tell us what you need (short and clear)." disabled={busy} />
+                  <div style={{ marginTop: 6, fontSize: 12.5, color: TEXT_DIM }}>
+                    This helps us onboard you faster.
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", borderTop: `1px solid ${BORDER}`, paddingTop: 14 }}>
+                <button
+                  type="submit"
+                  disabled={!canSubmitEnquiry}
+                  style={{
+                    borderRadius: 12,
+                    padding: "10px 14px",
+                    border: "1px solid rgba(201,162,77,0.55)",
+                    background: canSubmitEnquiry
+                      ? "linear-gradient(90deg, rgba(201,162,77,0.98), rgba(245,222,179,0.92))"
+                      : "rgba(255,255,255,0.10)",
+                    color: canSubmitEnquiry ? "#0e1116" : "rgba(244,246,248,0.55)",
+                    cursor: canSubmitEnquiry ? "pointer" : "not-allowed",
+                    fontWeight: 950,
+                    boxShadow: canSubmitEnquiry ? "0 14px 36px -22px rgba(201,162,77,0.65)" : "none",
+                    minWidth: 220,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                  }}
+                >
+                  {busy ? (
+                    <>
+                      <Spinner /> Submitting…
+                    </>
+                  ) : (
+                    <>Submit enquiry →</>
+                  )}
+                </button>
+              </div>
             </form>
           )}
         </div>

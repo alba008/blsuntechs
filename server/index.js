@@ -1,4 +1,5 @@
 // server/index.js
+import "dotenv/config"; // ✅ loads server/.env automatically
 import express from "express";
 import app from "./app.js";
 

@@ -1,24 +1,34 @@
+// server/app.js
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import stripeRoutes from "./routes/stripe.js";
 import stripeWebhookRoutes from "./routes/stripeWebhook.js";
-
-dotenv.config();
+import startProjectRoutes from "./routes/startProject.js";
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+// CORS (frontend)
+app.use(
+  cors({
+    origin: process.env.ORIGIN || "http://localhost:3000",
+    credentials: true,
+  })
+);
 
-// IMPORTANT: webhook must come BEFORE express.json()
-app.use("/api/stripe", stripeWebhookRoutes);
+// ✅ Webhook must use raw body BEFORE express.json()
+app.use("/stripe", stripeWebhookRoutes);
 
-// JSON for everything else
+// ✅ JSON for normal routes
 app.use(express.json());
 
-app.use("/api/stripe", stripeRoutes);
+// ✅ Stripe API routes
+app.use("/stripe", stripeRoutes);
 
-app.get("/api/ping", (req, res) => res.json({ ok: true }));
+// ✅ Start Project routes (these become /api/start-project and /api/intakes)
+app.use("/", startProjectRoutes);
+
+// ✅ Health (becomes /api/health because index.js mounts app at /api)
+app.get("/health", (req, res) => res.json({ ok: true }));
 
 export default app;
