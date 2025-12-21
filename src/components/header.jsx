@@ -7,9 +7,9 @@ import StartProjectModal from "./StartProjectModal";
 
 // Keep nav lean + client-facing (anchors for homepage sections)
 const LINKS = [
-  { href: "#about", label: "About", type: "anchor" },
-  { href: "#projects", label: "Work", type: "anchor" },
-  { href: "#contact", label: "Contact", type: "anchor" },
+  { href: "/about", label: "About", type: "route" },
+  { href: "/projects", label: "Work", type: "route" }, // or keep as you prefer
+  { href: "/contact", label: "Contact", type: "route" },
 ];
 
 function isAnchor(href) {
