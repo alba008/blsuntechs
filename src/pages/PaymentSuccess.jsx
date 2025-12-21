@@ -3,10 +3,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import Header from "../components/header";
 
-
-const API_BASE = (
-  process.env.REACT_APP_API_BASE || "http://localhost:5050/api"
-).replace(/\/$/, "");
+const API_BASE = (process.env.REACT_APP_API_BASE || "http://localhost:5050/api").replace(
+  /\/$/,
+  ""
+);
 
 function useQuery() {
   const { search } = useLocation();
@@ -35,9 +35,41 @@ async function copyText(text) {
   }
 }
 
+// ✅ simple responsive hook (no CSS needed)
+function useMediaQuery(query) {
+  const getMatches = () => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia(query).matches;
+  };
+
+  const [matches, setMatches] = useState(getMatches);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia(query);
+
+    const onChange = () => setMatches(mql.matches);
+
+    // modern + fallback
+    if (mql.addEventListener) mql.addEventListener("change", onChange);
+    else mql.addListener(onChange);
+
+    setMatches(mql.matches);
+
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener("change", onChange);
+      else mql.removeListener(onChange);
+    };
+  }, [query]);
+
+  return matches;
+}
+
 export default function PaymentSuccess() {
   const query = useQuery();
   const sessionId = query.get("session_id");
+
+  const isMobile = useMediaQuery("(max-width: 640px)");
 
   const [state, setState] = useState({
     status: "loading", // loading | paid | unpaid | error
@@ -66,7 +98,6 @@ export default function PaymentSuccess() {
     }
 
     try {
-      // 1) Fetch session details
       const sessionUrl = `${API_BASE}/stripe/session/${encodeURIComponent(
         sessionId
       )}?ts=${Date.now()}`;
@@ -87,7 +118,7 @@ export default function PaymentSuccess() {
         return;
       }
 
-      // 2) Fetch projects and map price id -> label (no server changes needed)
+      // map price id -> label
       const priceId = sessionData?.metadata?.project_price_id || null;
 
       let label = null;
@@ -100,7 +131,7 @@ export default function PaymentSuccess() {
         const projects = projectsJson?.projects || [];
         label = projects.find((p) => p.id === priceId)?.label || null;
       } catch {
-        // If this fails, we still continue (we just won't have label)
+        // continue without label
       }
 
       const paid = sessionData?.payment_status === "paid";
@@ -163,7 +194,7 @@ export default function PaymentSuccess() {
 
   const service =
     state.serviceLabel ||
-    data?.metadata?.project_label || // if you later add this on server
+    data?.metadata?.project_label ||
     "Your service";
 
   const badge =
@@ -184,130 +215,155 @@ export default function PaymentSuccess() {
       ? "We couldn’t verify your payment"
       : "Verifying payment…";
 
+  // ✅ responsive style overrides
+  const r = {
+    pagePadding: isMobile ? 14 : 24,
+    cardPadding: isMobile ? 16 : 22,
+    h1Size: isMobile ? 22 : 26,
+    gridColumns: isMobile ? "1fr" : "1.15fr 0.85fr",
+    topRowDirection: isMobile ? "column" : "row",
+    badgeAlign: isMobile ? "flex-start" : "flex-end",
+    actionsDirection: isMobile ? "column" : "row",
+    actionBtnWidth: isMobile ? "100%" : "auto",
+  };
+
   return (
     <>
+      <Header />
 
-    <Header />
-    <div style={styles.page}>
-        
-      <div style={styles.bgGlowA} />
-      <div style={styles.bgGlowB} />
+      <div style={{ ...styles.page, padding: r.pagePadding }}>
+        <div style={styles.bgGlowA} />
+        <div style={styles.bgGlowB} />
 
-      <div style={styles.shell}>
-        <div style={styles.card}>
-          <div style={styles.topRow}>
-            <div>
-              <div style={styles.kicker}>Payment confirmation</div>
-              <h1 style={styles.h1}>{title}</h1>
-              <p style={styles.sub}>
-                {state.status === "loading"
-                  ? "Confirming your checkout with Stripe…"
-                  : state.message}
-              </p>
-            </div>
-
+        <div style={styles.shell}>
+          <div style={{ ...styles.card, padding: r.cardPadding }}>
             <div
               style={{
-                ...styles.badge,
-                ...(badge.tone === "ok"
-                  ? styles.badgeOk
-                  : badge.tone === "warn"
-                  ? styles.badgeWarn
-                  : badge.tone === "bad"
-                  ? styles.badgeBad
-                  : styles.badgeInfo),
+                ...styles.topRow,
+                flexDirection: r.topRowDirection,
+                alignItems: isMobile ? "stretch" : "flex-start",
               }}
             >
-              <span style={styles.badgeDot} />
-              {badge.text}
-            </div>
-          </div>
-
-          <div style={styles.grid}>
-            <div style={styles.panel}>
-              <div style={styles.panelTitle}>Summary</div>
-
-              <div style={styles.row}>
-                <div style={styles.label}>Service</div>
-                <div style={styles.value}>{service}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={styles.kicker}>Payment confirmation</div>
+                <h1 style={{ ...styles.h1, fontSize: r.h1Size }}>{title}</h1>
+                <p style={styles.sub}>
+                  {state.status === "loading"
+                    ? "Confirming your checkout with Stripe…"
+                    : state.message}
+                </p>
               </div>
 
-              <div style={styles.row}>
-                <div style={styles.label}>Amount</div>
-                <div style={styles.value}>{amount}</div>
-              </div>
-
-              <div style={styles.hr} />
-
-              <div style={styles.row}>
-                <div style={styles.label}>Customer</div>
-                <div style={styles.value}>{customerName}</div>
-              </div>
-
-              <div style={styles.row}>
-                <div style={styles.label}>Email</div>
-                <div style={styles.value}>{email}</div>
+              <div
+                style={{
+                  ...styles.badge,
+                  alignSelf: r.badgeAlign,
+                  ...(badge.tone === "ok"
+                    ? styles.badgeOk
+                    : badge.tone === "warn"
+                    ? styles.badgeWarn
+                    : badge.tone === "bad"
+                    ? styles.badgeBad
+                    : styles.badgeInfo),
+                }}
+              >
+                <span style={styles.badgeDot} />
+                {badge.text}
               </div>
             </div>
 
-            <div style={styles.panel}>
-              <div style={styles.panelTitle}>Next steps</div>
+            <div style={{ ...styles.grid, gridTemplateColumns: r.gridColumns }}>
+              <div style={styles.panel}>
+                <div style={styles.panelTitle}>Summary</div>
 
-              <p style={styles.noteText}>
-                We’ll follow up shortly with the next steps for your project. If you need support,
-                use the reference below.
-              </p>
+                <div style={styles.row}>
+                  <div style={styles.label}>Service</div>
+                  <div style={{ ...styles.value, textAlign: "right" }}>{service}</div>
+                </div>
 
-              {sessionId ? (
-                <div style={styles.refBox}>
-                  <div style={styles.refLabel}>Reference</div>
-                  <div style={styles.refRow}>
-                    <span style={styles.mono}>{sessionId}</span>
-                    <button
-                      type="button"
-                      style={styles.copyBtn}
-                      onClick={async () => {
-                        const ok = await copyText(sessionId);
-                        showToast(ok ? "Reference copied" : "Copy failed");
-                      }}
-                    >
-                      Copy
-                    </button>
+                <div style={styles.row}>
+                  <div style={styles.label}>Amount</div>
+                  <div style={{ ...styles.value, textAlign: "right" }}>{amount}</div>
+                </div>
+
+                <div style={styles.hr} />
+
+                <div style={styles.row}>
+                  <div style={styles.label}>Customer</div>
+                  <div style={{ ...styles.value, textAlign: "right" }}>{customerName}</div>
+                </div>
+
+                <div style={styles.row}>
+                  <div style={styles.label}>Email</div>
+                  <div style={{ ...styles.value, textAlign: "right", overflowWrap: "anywhere" }}>
+                    {email}
                   </div>
                 </div>
-              ) : null}
-
-              <div style={styles.actions}>
-                <button
-                  onClick={() => window.location.reload()}
-                  style={styles.primaryBtn}
-                  type="button"
-                >
-                  Refresh status
-                </button>
-
-                <Link to="/" style={styles.secondaryBtn}>
-                  Back to Home
-                </Link>
               </div>
 
-              {state.status === "unpaid" && (
-                <div style={styles.note}>
-                  If you already paid, wait a moment and click <b>Refresh status</b>. Otherwise,
-                  return and complete checkout again.
+              <div style={styles.panel}>
+                <div style={styles.panelTitle}>Next steps</div>
+
+                <p style={styles.noteText}>
+                  We’ll follow up shortly with the next steps for your project. If you need support,
+                  use the reference below.
+                </p>
+
+                {sessionId ? (
+                  <div style={styles.refBox}>
+                    <div style={styles.refLabel}>Reference</div>
+
+                    {/* ✅ wraps cleanly on mobile */}
+                    <div style={{ ...styles.refRow, flexWrap: "wrap", justifyContent: "flex-start" }}>
+                      <span style={{ ...styles.mono, flex: "1 1 240px" }}>{sessionId}</span>
+
+                      <button
+                        type="button"
+                        style={{ ...styles.copyBtn, width: isMobile ? "100%" : "auto" }}
+                        onClick={async () => {
+                          const ok = await copyText(sessionId);
+                          showToast(ok ? "Reference copied" : "Copy failed");
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <div
+                  style={{
+                    ...styles.actions,
+                    flexDirection: r.actionsDirection,
+                  }}
+                >
+                  <button
+                    onClick={() => window.location.reload()}
+                    style={{ ...styles.primaryBtn, width: r.actionBtnWidth }}
+                    type="button"
+                  >
+                    Refresh status
+                  </button>
+
+                  <Link to="/" style={{ ...styles.secondaryBtn, width: r.actionBtnWidth }}>
+                    Back to Home
+                  </Link>
                 </div>
-              )}
+
+                {state.status === "unpaid" && (
+                  <div style={styles.note}>
+                    If you already paid, wait a moment and click <b>Refresh status</b>. Otherwise,
+                    return and complete checkout again.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        
+        {toast ? <div style={styles.toast}>{toast}</div> : null}
       </div>
-
-      {toast ? <div style={styles.toast}>{toast}</div> : null}
-    </div>
     </>
-
   );
 }
 
@@ -317,7 +373,6 @@ const styles = {
     position: "relative",
     display: "grid",
     placeItems: "center",
-    padding: 24,
     background:
       "radial-gradient(1200px 600px at 10% 10%, rgba(201,162,77,0.10), transparent 60%), radial-gradient(1200px 600px at 90% 20%, rgba(96,165,250,0.10), transparent 60%), #0b1220",
     color: "#e5e7eb",
@@ -350,7 +405,6 @@ const styles = {
     borderRadius: 20,
     background: "rgba(17, 24, 39, 0.78)",
     border: "1px solid rgba(255,255,255,0.10)",
-    padding: 22,
     boxShadow: "0 28px 90px rgba(0,0,0,0.45)",
     backdropFilter: "blur(10px)",
     WebkitBackdropFilter: "blur(10px)",
@@ -358,7 +412,6 @@ const styles = {
   topRow: {
     display: "flex",
     gap: 16,
-    alignItems: "flex-start",
     justifyContent: "space-between",
     flexWrap: "wrap",
     paddingBottom: 14,
@@ -370,7 +423,7 @@ const styles = {
     textTransform: "uppercase",
     color: "rgba(229,231,235,0.62)",
   },
-  h1: { margin: "6px 0 0", fontSize: 26, fontWeight: 900, lineHeight: 1.1 },
+  h1: { margin: "6px 0 0", fontWeight: 900, lineHeight: 1.1 },
   sub: { margin: "10px 0 0", color: "rgba(229,231,235,0.80)", lineHeight: 1.45 },
   badge: {
     display: "inline-flex",
@@ -381,15 +434,31 @@ const styles = {
     fontWeight: 800,
     fontSize: 13,
     userSelect: "none",
+    whiteSpace: "nowrap",
   },
   badgeDot: { width: 8, height: 8, borderRadius: 99, background: "currentColor", opacity: 0.9 },
-  badgeOk: { color: "#22c55e", border: "1px solid rgba(34,197,94,0.28)", background: "rgba(34,197,94,0.08)" },
-  badgeWarn: { color: "#f59e0b", border: "1px solid rgba(245,158,11,0.28)", background: "rgba(245,158,11,0.08)" },
-  badgeBad: { color: "#ef4444", border: "1px solid rgba(239,68,68,0.28)", background: "rgba(239,68,68,0.08)" },
-  badgeInfo: { color: "#60a5fa", border: "1px solid rgba(96,165,250,0.28)", background: "rgba(96,165,250,0.08)" },
+  badgeOk: {
+    color: "#22c55e",
+    border: "1px solid rgba(34,197,94,0.28)",
+    background: "rgba(34,197,94,0.08)",
+  },
+  badgeWarn: {
+    color: "#f59e0b",
+    border: "1px solid rgba(245,158,11,0.28)",
+    background: "rgba(245,158,11,0.08)",
+  },
+  badgeBad: {
+    color: "#ef4444",
+    border: "1px solid rgba(239,68,68,0.28)",
+    background: "rgba(239,68,68,0.08)",
+  },
+  badgeInfo: {
+    color: "#60a5fa",
+    border: "1px solid rgba(96,165,250,0.28)",
+    background: "rgba(96,165,250,0.08)",
+  },
   grid: {
     display: "grid",
-    gridTemplateColumns: "1.15fr 0.85fr",
     gap: 14,
     marginTop: 14,
   },
@@ -398,11 +467,18 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.08)",
     background: "rgba(15, 23, 42, 0.55)",
     padding: 16,
+    minWidth: 0,
   },
   panelTitle: { fontWeight: 900, marginBottom: 10, letterSpacing: 0.2 },
-  row: { display: "flex", justifyContent: "space-between", gap: 12, padding: "10px 0" },
+  row: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    padding: "10px 0",
+    minWidth: 0,
+  },
   label: { color: "rgba(229,231,235,0.65)", fontSize: 13 },
-  value: { fontWeight: 800 },
+  value: { fontWeight: 800, overflowWrap: "anywhere", minWidth: 0 },
   hr: { height: 1, background: "rgba(255,255,255,0.08)", margin: "10px 0" },
   noteText: { margin: 0, color: "rgba(229,231,235,0.78)", lineHeight: 1.5 },
   refBox: {
@@ -413,24 +489,19 @@ const styles = {
     border: "1px solid rgba(255,255,255,0.08)",
   },
   refLabel: { fontSize: 12, color: "rgba(229,231,235,0.62)", marginBottom: 8, fontWeight: 800 },
-  refRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  refRow: { display: "flex", alignItems: "center", gap: 10 },
   mono: {
     fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     fontSize: 12,
     color: "rgba(229,231,235,0.92)",
     overflowWrap: "anywhere",
   },
-  monoInline: {
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-    fontSize: 12,
-    color: "rgba(229,231,235,0.85)",
-  },
   copyBtn: {
     border: "1px solid rgba(255,255,255,0.14)",
     background: "rgba(255,255,255,0.06)",
     color: "#e5e7eb",
     borderRadius: 12,
-    padding: "8px 10px",
+    padding: "10px 10px",
     fontWeight: 800,
     cursor: "pointer",
     whiteSpace: "nowrap",
@@ -439,7 +510,7 @@ const styles = {
   primaryBtn: {
     border: "none",
     borderRadius: 14,
-    padding: "11px 14px",
+    padding: "12px 14px",
     background: "#C9A24D",
     color: "#111827",
     fontWeight: 900,
@@ -450,7 +521,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 14,
-    padding: "11px 14px",
+    padding: "12px 14px",
     border: "1px solid rgba(255,255,255,0.14)",
     color: "#e5e7eb",
     textDecoration: "none",
@@ -467,12 +538,6 @@ const styles = {
     fontSize: 13,
     lineHeight: 1.45,
   },
-  footerHint: {
-    marginTop: 12,
-    textAlign: "center",
-    color: "rgba(229,231,235,0.55)",
-    fontSize: 12,
-  },
   toast: {
     position: "fixed",
     bottom: 18,
@@ -486,5 +551,7 @@ const styles = {
     fontWeight: 900,
     boxShadow: "0 18px 50px rgba(0,0,0,0.45)",
     zIndex: 50,
+    maxWidth: "calc(100vw - 24px)",
+    textAlign: "center",
   },
 };
