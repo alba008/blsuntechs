@@ -81,9 +81,9 @@ export default function LandingHero({ onOpenStartProject }) {
         }}
       />
 
-      <div className="relative mx-auto max-w-9xl px-6 sm:px-8 pt-24 pb-16 md:pt-32 md:pb-28">
+      <div className="relative mx-auto max-w-9xl px-2 sm:px-2 pt-4 pb-16 md:pt-32 md:pb-28">
         {/* layout: left 3/4, right 1/4 on lg+ */}
-        <div className="grid items-center gap-14 lg:gap-20 xl:gap-24 lg:grid-cols-4">
+        <div className="grid items-center gap-4 lg:gap-20 xl:gap-4 lg:grid-cols-4">
           {/* LEFT: copy on glass */}
           <div className="order-2 lg:order-1 lg:col-span-3">
             <motion.div
@@ -91,7 +91,7 @@ export default function LandingHero({ onOpenStartProject }) {
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.35 }}
-              className="relative rounded-3xl backdrop-blur-xl shadow-[0_18px_70px_-22px_rgba(0,0,0,0.55)] p-8 sm:p-12"
+              className="relative rounded-3xl backdrop-blur-xl shadow-[0_18px_70px_-22px_rgba(0,0,0,0.55)] p-8 sm:p-8"
               style={{
                 background:
                   "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(255,255,255,0.05))",
@@ -144,7 +144,7 @@ export default function LandingHero({ onOpenStartProject }) {
                 ].map((t) => (
                   <li
                     key={t}
-                    className="flex items-start gap-3 rounded-2xl px-4 py-3 backdrop-blur-md"
+                    className="flex items-start gap-3 rounded-2xl px-1.5 py-3 backdrop-blur-md"
                     style={{
                       background:
                         "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05))",
