@@ -10,9 +10,6 @@ const LINKS = [
   { href: "#about", label: "About", type: "anchor" },
   { href: "#projects", label: "Work", type: "anchor" },
   { href: "#contact", label: "Contact", type: "anchor" },
-
-  // Optional: keep if you WANT a dedicated payment page link visible.
-  // { href: "/pay", label: "Checkout", type: "route" },
 ];
 
 function isAnchor(href) {
@@ -68,32 +65,43 @@ export default function Header() {
     };
   }, [drawerOpen, startOpen]);
 
-  const NavItem = ({ href, label, onClick }) => {
-    const base =
-      "px-3 py-2 rounded-md text-sm md:text-[15px] " +
-      "text-amber-100/85 hover:text-amber-50 " +
-      "hover:bg-amber-300/10 transition " +
-      "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60";
+  const NavItem = ({ href, label, onClick, mobile = false }) => {
+    // ✅ More contrast on mobile for visibility
+    const base = mobile
+      ? "px-3 py-3 rounded-xl text-[15px] font-semibold " +
+        "text-amber-50/95 bg-white/0 hover:bg-white/6 active:bg-white/10 " +
+        "border border-white/0 hover:border-amber-300/20 transition " +
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+      : "px-3 py-2 rounded-md text-sm md:text-[15px] " +
+        "text-amber-100/85 hover:text-amber-50 " +
+        "hover:bg-amber-300/10 transition " +
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60";
 
     if (isAnchor(href)) {
       return (
-        <a key={href} href={href} onClick={onClick} className={base}>
+        <a href={href} onClick={onClick} className={base}>
           {label}
         </a>
       );
     }
 
     return (
-      <Link key={href} to={href} onClick={onClick} className={base}>
+      <Link to={href} onClick={onClick} className={base}>
         {label}
       </Link>
     );
   };
 
-  const NavLinks = ({ onClick }) => (
+  const NavLinks = ({ onClick, mobile = false }) => (
     <>
       {LINKS.map((l) => (
-        <NavItem key={l.href} href={l.href} label={l.label} onClick={onClick} />
+        <NavItem
+          key={l.href}
+          href={l.href}
+          label={l.label}
+          onClick={onClick}
+          mobile={mobile}
+        />
       ))}
     </>
   );
@@ -104,7 +112,7 @@ export default function Header() {
         className="
           sticky top-0 z-[60] border-b
           border-amber-300/15
-          bg-[#0b0b0c]/72
+          bg-[#0b0b0c]/80
           backdrop-blur supports-[backdrop-filter]:backdrop-blur
           shadow-[0_1px_0_0_rgba(251,191,36,0.12),0_10px_30px_-12px_rgba(0,0,0,0.6)]
         "
@@ -153,68 +161,74 @@ export default function Header() {
               aria-controls="mobile-drawer"
               aria-label="Open menu"
               className="md:hidden inline-flex items-center justify-center rounded-md p-2
-                         text-amber-100/90 hover:text-amber-50 hover:bg-amber-300/10
-                         focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+                         text-amber-100/95 hover:text-amber-50 hover:bg-amber-300/12
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
             >
               {drawerOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
-        {/* Drawer overlay */}
+        {/* ✅ Darker overlay so drawer stands out more */}
         <div
-          className={`fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm transition-opacity duration-200 md:hidden ${
+          className={`fixed inset-0 z-[70] bg-black/80 backdrop-blur-[2px] transition-opacity duration-200 md:hidden ${
             drawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           }`}
           onClick={closeDrawer}
         />
 
-        {/* Side drawer */}
+        {/* ✅ Side drawer: more opaque background, clearer separation */}
         <aside
           id="mobile-drawer"
           ref={drawerRef}
-          className={`fixed inset-y-0 right-0 z-[80] w-[80%] max-w-sm transform
-                      bg-gradient-to-b from-[#0b0b0c] to-[#111012]
-                      border-l border-amber-300/15 shadow-2xl
+          className={`fixed inset-y-0 right-0 z-[80] w-[84%] max-w-sm transform
+                      bg-[#0b0b0c]/98
+                      border-l border-amber-300/25
+                      shadow-[0_20px_80px_rgba(0,0,0,0.85)]
                       transition-transform duration-200 md:hidden ${
                         drawerOpen ? "translate-x-0" : "translate-x-full"
                       }`}
           role="dialog"
           aria-modal="true"
         >
+          {/* Drawer header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-amber-300/15">
             <div className="inline-flex items-center gap-2">
-              <div className="h-7 w-7 rounded-md bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-500 shadow-[0_0_0_2px_rgba(251,191,36,0.2)]" />
+              <div className="h-7 w-7 rounded-md bg-gradient-to-tr from-amber-400 via-amber-300 to-amber-500 shadow-[0_0_0_2px_rgba(251,191,36,0.22)]" />
               <span className="text-amber-50 font-semibold">Menu</span>
             </div>
             <button
               onClick={closeDrawer}
               aria-label="Close menu"
-              className="rounded-md p-2 text-amber-100/90 hover:text-amber-50 hover:bg-amber-300/10
-                         focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60"
+              className="rounded-md p-2 text-amber-100/95 hover:text-amber-50 hover:bg-amber-300/12
+                         focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
             >
               <X size={20} />
             </button>
           </div>
 
+          {/* Drawer body */}
           <nav className="px-3 py-4">
-            <div className="flex flex-col">
-              <NavLinks onClick={closeDrawer} />
+            {/* ✅ Add a subtle panel behind links for better visibility */}
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-2">
+              <div className="flex flex-col">
+                <NavLinks onClick={closeDrawer} mobile />
 
-              <button
-                type="button"
-                onClick={openStart}
-                className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-lg
-                           bg-amber-400/95 px-3 py-2 text-sm font-semibold text-black
-                           hover:bg-amber-300 transition
-                           ring-1 ring-amber-300/70 shadow-[0_12px_28px_-16px_rgba(251,191,36,0.65)]
-                           focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
-              >
-                Start Project
-              </button>
+                <button
+                  type="button"
+                  onClick={openStart}
+                  className="mt-3 inline-flex items-center justify-center gap-1.5 rounded-xl
+                             bg-amber-400 px-3 py-2.5 text-[15px] font-extrabold text-black
+                             hover:bg-amber-300 transition
+                             ring-1 ring-amber-300/80 shadow-[0_18px_40px_-22px_rgba(251,191,36,0.9)]
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
+                >
+                  Start Project
+                </button>
+              </div>
             </div>
 
-            <div className="mt-6 border-t border-amber-300/15 pt-4 text-[12px] text-amber-200/70">
+            <div className="mt-6 border-t border-amber-300/15 pt-4 text-[12px] text-amber-200/75">
               © {new Date().getFullYear()} BlsunTech • All rights reserved
             </div>
           </nav>
@@ -223,10 +237,7 @@ export default function Header() {
 
       {/* Modal portal */}
       {startOpen &&
-        createPortal(
-          <StartProjectModal open={startOpen} onClose={closeStart} />,
-          document.body
-        )}
+        createPortal(<StartProjectModal open={startOpen} onClose={closeStart} />, document.body)}
     </>
   );
 }
