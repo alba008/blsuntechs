@@ -1,6 +1,5 @@
 // src/pages/ProjectPayment.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import Header from "../components/header";
 
 /**
  * Accept either:
@@ -213,7 +212,7 @@ export default function ProjectPayment() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0e1116" }}>
-      <Header />
+      
 
       <main style={S.page}>
         <div style={S.shell}>

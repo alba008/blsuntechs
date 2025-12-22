@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, ChevronDown } from "lucide-react";
 import StartProjectModal from "./StartProjectModal";
+import StockTicker from "./StockTicker";
+
 
 // Keep nav lean + client-facing (anchors for homepage sections)
 const LINKS = [
@@ -117,6 +119,12 @@ export default function Header() {
           shadow-[0_1px_0_0_rgba(251,191,36,0.12),0_10px_30px_-12px_rgba(0,0,0,0.6)]
         "
       >
+
+ {/* Optional: give the ticker a soft gold edge */}
+ <div className="border-b border-amber-300/10 bg-black/20">
+          <StockTicker />
+        </div>
+
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-14 items-center justify-between">
             {/* Logo */}

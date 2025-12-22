@@ -23,6 +23,8 @@ import ProjectPayment from "./pages/ProjectPayment";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCancel from "./pages/PaymentCancel";
 import ContactPage from "./pages/Contactpage";
+import AboutPage from "./pages/Aboutpage";
+
 
 /**
  * Home stays as a section-based landing page.
@@ -77,6 +79,9 @@ export default function App() {
 
             {/* ✅ Static pages */}
             <Route path="/contact" element={<ContactPage onOpenStartProject={() => openStart()} />} />
+
+            <Route path="/about" element={<AboutPage onOpenStartProject={() => openStart()} />} />
+
 
             {/* ✅ Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
