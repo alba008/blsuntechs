@@ -4,34 +4,35 @@ import { motion } from "framer-motion";
 
 const projects = [
   {
-    title: "Makutanoni.com – Virtual Mall Marketplace",
+    title: "Makutanoni.com – Digital Marketplace Platform",
     description:
-      "A modern virtual shopping mall with multi-vendor listings, Amazon affiliate integration, and intelligent discovery.",
+      "A multi-category digital marketplace connecting buyers and sellers with scalable listings, affiliate integrations, and smart product discovery.",
     tech: ["Django", "PostgreSQL", "TailwindCSS", "n8n"],
     link: "https://makutanoni.com",
   },
   {
-    title: "KiraEstate.com – Real Estate Marketplace",
+    title: "KiraEstate.com – Property & Housing Platform",
     description:
-      "A real estate marketplace for Tanzania & East Africa featuring map-based property search & filters, agent dashboards, saved favorites, nearby places, and contact/booking flows.",
+      "A property platform serving Tanzania & East Africa with map-based search, agent profiles, saved listings, nearby amenities, and booking workflows.",
     tech: ["AlpineJS", "TailwindCSS", "Google Maps", "M-Pesa API"],
     link: "https://kiraestate.com",
   },
   {
-    title: "Sockcs.com – E-commerce & Analytics",
+    title: "Sockcs.com – Commerce & Growth Platform",
     description:
-      "A data-driven online shop with visitor tracking, product recommendations, and SEO-optimized architecture.",
+      "A modern commerce platform built with analytics, visitor insights, product recommendations, and SEO-first architecture.",
     tech: ["Django", "Custom API", "Google Analytics", "Email Auth"],
     link: "https://sockcs.com",
   },
   {
-    title: "The Watcher – Education LMS Platform",
+    title: "ithewatcher – Platform Infrastructure & Services",
     description:
-      "A full-featured learning platform with course uploads, dashboards, and real-time progress tracking.",
+      "A unified platform powering logistics, authentication, analytics, and operational services across multiple digital products.",
     tech: ["React", "Firebase", "Realtime DB", "Progress Metrics"],
     link: "https://ithewatcher.com",
   },
 ];
+
 
 // --- motion helpers (unchanged) ---
 const container = {
