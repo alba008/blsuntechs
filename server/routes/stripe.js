@@ -9,9 +9,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-06-20",
 });
 
-// ✅ GET /api/stripe/projects
+// ✅ GET /api/stripe/projects  (ACTIVE PRODUCTS ONLY)
 router.get("/projects", async (req, res) => {
   try {
+    // 1) Pull ACTIVE products only
+    const products = await stripe.products.list({
+      active: true,
+      limit: 100,
+    });
+
+    const activeProductIds = new Set(products.data.map((p) => p.id));
+
+    // 2) Pull ACTIVE prices (still needed to get amounts)
     const prices = await stripe.prices.list({
       active: true,
       limit: 100,
@@ -19,6 +28,13 @@ router.get("/projects", async (req, res) => {
     });
 
     const projects = prices.data
+      // keep only prices that belong to ACTIVE products
+      .filter((p) => {
+        const prodId =
+          typeof p.product === "object" && p.product?.id ? p.product.id : p.product;
+        return activeProductIds.has(prodId);
+      })
+      // (optional) keep your one_time requirement
       .filter((p) => p.type === "one_time" && p.unit_amount != null)
       .map((p) => {
         const product = p.product;
@@ -44,6 +60,7 @@ router.get("/projects", async (req, res) => {
     return res.status(500).json({ error: "Failed to load Stripe projects." });
   }
 });
+
 
 // ✅ POST /api/stripe/create-checkout-session
 router.post("/create-checkout-session", async (req, res) => {
